@@ -10,6 +10,7 @@ describe('envValidationSchema', () => {
     DB_PASSWORD: 'ckm',
     DB_NAME: 'ckm_test',
     JWT_SECRET: 'a_secret_that_is_long_enough_for_joi_min_32',
+    ALLOWED_ORIGIN: 'http://localhost:5173',
   };
 
   it('passes when all required fields are present', () => {

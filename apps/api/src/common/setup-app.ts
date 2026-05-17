@@ -4,6 +4,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import helmet from 'helmet';
 import { ErrorReporter } from './error-reporter/error-reporter.interface';
 import { ProblemDetailsExceptionFilter } from './filters/problem-details-exception.filter';
 import { QueryFailedErrorFilter } from './filters/query-failed-error.filter';
@@ -21,7 +22,18 @@ import { QueryFailedErrorFilter } from './filters/query-failed-error.filter';
 export function setupApp(
   app: INestApplication,
   errorReporter: ErrorReporter,
+  allowedOrigin: string,
 ): void {
+  // --------------------------------------------------------------------
+  // Security headers
+  // --------------------------------------------------------------------
+  app.use(helmet());
+
+  // --------------------------------------------------------------------
+  // CORS — explicit allowlist driven by ALLOWED_ORIGIN env var.
+  // --------------------------------------------------------------------
+  app.enableCors({ origin: allowedOrigin, credentials: false });
+
   // --------------------------------------------------------------------
   // Interceptors
   // --------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { setupApp } from './common/setup-app';
@@ -10,12 +11,14 @@ async function bootstrap(): Promise<void> {
   // Use nestjs-pino as the application logger.
   app.useLogger(app.get(Logger));
 
+  const config = app.get(ConfigService);
+
   // Wire global pipes, interceptors, and filters.
   // In production, ErrorReporter should be obtained from DI when a real
   // provider (e.g. Sentry) is configured. For now, NoopErrorReporter is fine.
-  setupApp(app, new NoopErrorReporter());
+  setupApp(app, new NoopErrorReporter(), config.getOrThrow<string>('app.allowedOrigin'));
 
-  const port = process.env['PORT'] ?? 3000;
+  const port = config.getOrThrow<number>('app.port');
   await app.listen(port);
 }
 

@@ -6,6 +6,7 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().default(3000),
   RUN_MIGRATIONS: Joi.boolean().default(true),
+  ALLOWED_ORIGIN: Joi.string().required(),
 
   DB_TYPE: Joi.string().valid('postgres').required(),
   DB_HOST: Joi.string().required(),
@@ -31,6 +32,7 @@ export default () => ({
     nodeEnv: process.env['NODE_ENV'],
     port: +(process.env['PORT'] ?? 3000),
     runMigrations: process.env['RUN_MIGRATIONS'] === 'true',
+    allowedOrigin: process.env['ALLOWED_ORIGIN'],
   },
   database: {
     type: process.env['DB_TYPE'],
