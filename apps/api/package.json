@@ -50,6 +50,10 @@
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@ckm/eslint-config": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
