@@ -7,3 +7,5 @@ export * from './utils/entity.util';
 export * from './error-reporter/error-reporter.interface';
 export * from './error-reporter/noop-error-reporter';
 export * from './filters';
+export * from './logger';
+export * from './setup-app';
