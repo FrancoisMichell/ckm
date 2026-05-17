@@ -52,7 +52,7 @@ Total sessions: ~60. Mark each box as you complete the session.
 ### Phase 1 — Backend (M0–M9 → tag `v0.1.0-api-complete`)
 
 - [x] Session 1 — M0 scaffold infrastructure (Opus) — done 2026-05-17
-- [ ] Session 2 — M0 docs + CLAUDE.md + agents + CI (Opus)
+- [x] Session 2 — M0 docs + CLAUDE.md + agents + CI (Opus) — done 2026-05-17
 - [ ] Session 3 — M0 audit + PR (Sonnet, no skill)
 - [ ] Session 4 — M1 contracts work (Sonnet)
 - [ ] Session 5 — M1 audit + PR (Sonnet, no skill)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Session 1 complete (2026-05-17) — `chore/m00-scaffold` branch has 0.1–0.3 committed; pnpm/turbo installed, Postgres dev + test containers running. Branch not yet pushed/merged.
-**Next session**: Session 2 — M0 docs + CLAUDE.md + agents + CI.
+**Current state**: Sessions 1 + 2 complete (2026-05-17) — `chore/m00-scaffold` pushed to origin. Sub-steps 0.1–0.6 all done: pnpm/turbo wiring, tsconfig + eslint-config skeletons, docker-compose dev+test Postgres, `docs/api/` (from seirin) + `docs/web/` (from mestre-kame, patched) + `docs/plan.md` + `RUNBOOK.md` + root `CLAUDE.md` + all six `.claude/agents/*.md`, CI workflow green on push (run 25991618871). PR not yet opened — that's Session 3.
+**Next session**: Session 3 — M0 audit + PR (Sonnet, no skill).
 
 ---
 
