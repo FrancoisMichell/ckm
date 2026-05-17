@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"c:/Users/franc/Documents/Projects/ckm\" add packages/ pnpm-lock.yaml)",
+      "Bash(git -C \"c:/Users/franc/Documents/Projects/ckm\" commit -m \"chore\\(monorepo\\): 0.2 — tsconfig + eslint-config skeleton packages\")",
+      "PowerShell(docker compose up -d 2>&1; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(docker version 2>&1 | Select-Object -First 15; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(docker compose ps; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(docker compose exec -T postgres psql -U ckm -d ckm -c \"SELECT 1;\"; \"EXIT_dev=$LASTEXITCODE\"; docker compose exec -T postgres-test psql -U ckm -d ckm_test -c \"SELECT 1;\"; \"EXIT_test=$LASTEXITCODE\")",
+      "Bash(git -C \"c:/Users/franc/Documents/Projects/ckm\" add docker-compose.yml)",
+      "Bash(git -C \"c:/Users/franc/Documents/Projects/ckm\" commit -m \"chore\\(monorepo\\): 0.3 — docker-compose postgres + postgres-test\")",
+      "Bash(git -C \"c:/Users/franc/Documents/Projects/ckm\" log --oneline --all)",
+      "Bash(git -C \"c:/Users/franc/Documents/Projects/ckm\" status)",
+      "Read(//c/Users/franc/.claude/plans/**)",
+      "Bash(ls \"C:/Users/franc/Documents/Projects/seirin/docs-recreation/\" \"C:/Users/franc/Documents/Projects/mestre-kame/docs-new-repo/\" 2>&1 | head -60)",
+      "Read(//c/Users/franc/Documents/Projects/seirin/docs-recreation/**)",
+      "Bash(ls \"C:/Users/franc/Documents/Projects/seirin/docs-recreation/claude-md-templates/\" \"C:/Users/franc/Documents/Projects/mestre-kame/docs-new-repo/claude-md-templates/\")",
+      "Read(//c/Users/franc/Documents/Projects/mestre-kame/docs-new-repo/claude-md-templates/**)",
+      "Bash(mkdir -p \"C:/Users/franc/Documents/Projects/ckm/docs/api\" \"C:/Users/franc/Documents/Projects/ckm/docs/web\" \"C:/Users/franc/Documents/Projects/ckm/docs/audits\" \"C:/Users/franc/Documents/Projects/ckm/.claude/agents\" \"C:/Users/franc/Documents/Projects/ckm/.github/workflows\" \"C:/Users/franc/Documents/Projects/ckm/docs/web/design-references\")",
+      "Bash(cp \"C:/Users/franc/Documents/Projects/seirin/docs-recreation/\"*.md \"C:/Users/franc/Documents/Projects/ckm/docs/api/\")",
+      "Bash(cp \"C:/Users/franc/Documents/Projects/mestre-kame/docs-new-repo/\"*.md \"C:/Users/franc/Documents/Projects/ckm/docs/web/\")",
+      "Bash(cp \"C:/Users/franc/.claude/plans/i-want-to-recreate-virtual-pillow.md\" \"C:/Users/franc/Documents/Projects/ckm/docs/plan.md\")",
+      "Bash(cp \"C:/Users/franc/.claude/plans/RUNBOOK.md\" \"C:/Users/franc/Documents/Projects/ckm/RUNBOOK.md\")",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm test *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\franc\\Documents\\Projects\\ckm\\.claude"
+    ]
+  }
+}
