@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ckm
+      POSTGRES_PASSWORD: ckm
+      POSTGRES_DB: ckm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ckm
+      POSTGRES_PASSWORD: ckm
+      POSTGRES_DB: ckm_test
+    ports:
+      - "5433:5432"
+
+volumes:
+  postgres_data:
