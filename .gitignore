@@ -10,3 +10,6 @@ coverage/
 .pnpm-store/
 .DS_Store
 Thumbs.db
+
+# Claude Code per-user local settings (each contributor maintains their own)
+.claude/settings.local.json
