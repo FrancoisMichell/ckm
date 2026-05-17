@@ -56,6 +56,7 @@
     "@suites/doubles.jest": "^3.0.0",
     "@suites/unit": "^3.0.0",
     "@types/bcrypt": "^5.0.2",
+    "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.0",
     "@types/passport-jwt": "^4.0.1",
