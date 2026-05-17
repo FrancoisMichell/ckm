@@ -23,18 +23,22 @@ export const BELT_CONFIGS: Record<Belt, BeltConfig> = {
   [Belt.BLACK]: { label: 'Preta', color: '#171717' },
 };
 
-const BELT_RANK: Record<Belt, number> = {
-  [Belt.WHITE]: 1,
-  [Belt.YELLOW]: 2,
-  [Belt.ORANGE]: 3,
-  [Belt.GREEN]: 4,
-  [Belt.BLUE]: 5,
-  [Belt.BROWN]: 6,
-  [Belt.BLACK]: 7,
-};
+export const BELT_ORDER = [
+  Belt.WHITE,
+  Belt.YELLOW,
+  Belt.ORANGE,
+  Belt.GREEN,
+  Belt.BLUE,
+  Belt.BROWN,
+  Belt.BLACK,
+] as const;
+
+const BELT_RANK_MAP = new Map<Belt, number>(
+  BELT_ORDER.map((belt, i) => [belt, i + 1]),
+);
 
 export function beltRank(belt: Belt): number {
-  return BELT_RANK[belt];
+  return BELT_RANK_MAP.get(belt) ?? 0;
 }
 
 export function compareBelts(a: Belt, b: Belt): number {

@@ -5,8 +5,3 @@ export enum AttendanceStatus {
   ABSENT = 'absent',
   EXCUSED = 'excused',
 }
-
-export enum UserRoleName {
-  TEACHER = 'teacher',
-  STUDENT = 'student',
-}

@@ -2,26 +2,26 @@ import { describe, it, expect } from 'vitest';
 import { getSessionStatus } from '../session';
 
 describe('getSessionStatus', () => {
-  it('returns "scheduled" when start_time is null', () => {
-    expect(getSessionStatus({ start_time: null, end_time: null })).toBe('scheduled');
+  it('returns "scheduled" when startTime is null', () => {
+    expect(getSessionStatus({ startTime: null, endTime: null })).toBe('scheduled');
   });
 
-  it('returns "in_progress" when start_time is set but end_time is null', () => {
-    expect(getSessionStatus({ start_time: '18:30', end_time: null })).toBe('in_progress');
+  it('returns "in_progress" when startTime is set but endTime is null', () => {
+    expect(getSessionStatus({ startTime: '18:30', endTime: null })).toBe('in_progress');
   });
 
-  it('returns "completed" when both start_time and end_time are set', () => {
-    expect(getSessionStatus({ start_time: '18:30', end_time: '20:00' })).toBe('completed');
+  it('returns "completed" when both startTime and endTime are set', () => {
+    expect(getSessionStatus({ startTime: '18:30', endTime: '20:00' })).toBe('completed');
   });
 
-  it('returns "cancelled" when deleted_at is set, regardless of times', () => {
-    expect(getSessionStatus({ start_time: null, end_time: null, deleted_at: new Date() })).toBe('cancelled');
-    expect(getSessionStatus({ start_time: '18:30', end_time: null, deleted_at: '2025-01-01T00:00:00Z' })).toBe('cancelled');
-    expect(getSessionStatus({ start_time: '18:30', end_time: '20:00', deleted_at: new Date() })).toBe('cancelled');
+  it('returns "cancelled" when deletedAt is set, regardless of times', () => {
+    expect(getSessionStatus({ startTime: null, endTime: null, deletedAt: new Date() })).toBe('cancelled');
+    expect(getSessionStatus({ startTime: '18:30', endTime: null, deletedAt: '2025-01-01T00:00:00Z' })).toBe('cancelled');
+    expect(getSessionStatus({ startTime: '18:30', endTime: '20:00', deletedAt: new Date() })).toBe('cancelled');
   });
 
-  it('treats null/undefined deleted_at as not cancelled', () => {
-    expect(getSessionStatus({ start_time: null, end_time: null, deleted_at: null })).toBe('scheduled');
-    expect(getSessionStatus({ start_time: null, end_time: null })).toBe('scheduled');
+  it('treats null/undefined deletedAt as not cancelled', () => {
+    expect(getSessionStatus({ startTime: null, endTime: null, deletedAt: null })).toBe('scheduled');
+    expect(getSessionStatus({ startTime: null, endTime: null })).toBe('scheduled');
   });
 });

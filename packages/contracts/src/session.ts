@@ -11,14 +11,14 @@ export enum DayOfWeek {
 export type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface SessionForStatus {
-  start_time: string | null;
-  end_time: string | null;
-  deleted_at?: Date | string | null;
+  startTime: string | null;
+  endTime: string | null;
+  deletedAt?: Date | string | null;
 }
 
 export function getSessionStatus(session: SessionForStatus): SessionStatus {
-  if (session.deleted_at != null) return 'cancelled';
-  if (session.start_time == null) return 'scheduled';
-  if (session.end_time == null) return 'in_progress';
+  if (session.deletedAt != null) return 'cancelled';
+  if (session.startTime == null) return 'scheduled';
+  if (session.endTime == null) return 'in_progress';
   return 'completed';
 }
