@@ -1,0 +1,21 @@
+# Ignore node_modules — Docker will install them fresh.
+node_modules
+**/node_modules
+
+# Build artefacts from local dev — let Docker build these from source.
+**/dist
+**/coverage
+
+# Dev/test env files — never leak secrets into an image.
+**/.env
+**/.env.*
+
+# Editor/OS noise.
+.git
+.gitignore
+**/.DS_Store
+**/*.log
+
+# Turbo cache.
+.turbo
+**/.turbo
