@@ -6,3 +6,4 @@ export * from './utils/password.service';
 export * from './utils/entity.util';
 export * from './error-reporter/error-reporter.interface';
 export * from './error-reporter/noop-error-reporter';
+export * from './filters';
