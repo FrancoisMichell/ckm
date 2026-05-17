@@ -53,8 +53,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 
 - [x] Session 1 — M0 scaffold infrastructure (Opus) — done 2026-05-17
 - [x] Session 2 — M0 docs + CLAUDE.md + agents + CI (Opus) — done 2026-05-17
-- [ ] Session 3 — M0 audit + PR (Sonnet, no skill)
-- [ ] Session 4 — M1 contracts work (Sonnet)
+- [x] Session 3 — M0 audit + PR (Sonnet, no skill) — done 2026-05-17
+- [x] Session 4 — M1 contracts work (Sonnet) — done 2026-05-17
 - [ ] Session 5 — M1 audit + PR (Sonnet, no skill)
 - [ ] Session 6 — M2 NestJS scaffold + config + common scaffolding (Sonnet)
 - [ ] Session 7 — M2 error handling + logger + Dockerfile (Sonnet)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Sessions 1 + 2 complete (2026-05-17) — `chore/m00-scaffold` pushed to origin. Sub-steps 0.1–0.6 all done: pnpm/turbo wiring, tsconfig + eslint-config skeletons, docker-compose dev+test Postgres, `docs/api/` (from seirin) + `docs/web/` (from mestre-kame, patched) + `docs/plan.md` + `RUNBOOK.md` + root `CLAUDE.md` + all six `.claude/agents/*.md`, CI workflow green on push (run 25991618871). PR not yet opened — that's Session 3.
-**Next session**: Session 3 — M0 audit + PR (Sonnet, no skill).
+**Current state**: Sessions 1–4 complete (2026-05-17). M0 merged to `main` (PR #1). M1 done on `feat/m01-contracts`: `packages/contracts` v0 shipped — `Belt` / `AttendanceStatus` / `DayOfWeek` / `UserRoleName` enums, branded ID types (`UserId`, `ClassId`, `SessionId`, `AttendanceId`), `BELT_CONFIGS` with PT-BR labels, `BELT_ORDER` tuple + `beltRank` / `compareBelts`, `getSessionStatus` pure helper. 13/13 vitest tests green; `pnpm --filter contracts typecheck | test | build` all pass.
+**Next session**: Session 5 — M1 audit + PR (Sonnet, no skill).
 
 ---
 
