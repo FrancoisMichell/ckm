@@ -9,6 +9,12 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Opt JavaScript-based actions onto Node 24 ahead of the 2026-06-02 default
+  # switch. Node 20 is deprecated on runners and will be removed 2026-09-16.
+  # See https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   ci:
     name: lint / typecheck / build / test
