@@ -108,9 +108,9 @@ describe('QueryFailedErrorFilter', () => {
   });
 
   describe('known constraint → mapped response', () => {
-    it('maps uq_users_registry to 409 Registry already in use', () => {
+    it('maps uq_users_registry_active to 409 Registry already in use', () => {
       const { host, statusMock, jsonMock } = buildMockHost('/api/users');
-      const err = buildQueryFailedError('uq_users_registry');
+      const err = buildQueryFailedError('uq_users_registry_active');
 
       filter.catch(err, host);
 
@@ -135,8 +135,8 @@ describe('QueryFailedErrorFilter', () => {
     it('constraint map is a regular object (verifies structure)', () => {
       const internalMap = (filter as any).constraintMap as Record<string, unknown>;
       expect(typeof internalMap).toBe('object');
-      // M3a entries: uq_users_registry + uq_user_roles_user_role
-      expect(Object.keys(internalMap)).toContain('uq_users_registry');
+      // M3a entries: uq_users_registry_active (partial index) + uq_user_roles_user_role
+      expect(Object.keys(internalMap)).toContain('uq_users_registry_active');
       expect(Object.keys(internalMap)).toContain('uq_user_roles_user_role');
     });
   });

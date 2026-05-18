@@ -30,7 +30,8 @@ export class QueryFailedErrorFilter implements ExceptionFilter {
     { status: number; title: string; detail: string }
   > = {
     // M3a — users + user_roles
-    uq_users_registry: {
+    // uq_users_registry was replaced by the partial index uq_users_registry_active (migration 2)
+    uq_users_registry_active: {
       status: 409,
       title: 'Registry already in use',
       detail: 'A user with this registry already exists.',

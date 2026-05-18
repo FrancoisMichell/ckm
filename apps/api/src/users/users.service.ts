@@ -67,6 +67,9 @@ export class UsersService {
    * Returns the updated user or null if not found.
    */
   async update(id: string, patch: Partial<User>): Promise<User | null> {
+    if (patch.password) {
+      patch.password = await this.passwordService.hashPassword(patch.password);
+    }
     await this.usersRepository.update(id, patch);
     return this.findById(id);
   }

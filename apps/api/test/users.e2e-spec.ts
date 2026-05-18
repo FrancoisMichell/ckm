@@ -103,8 +103,7 @@ describe('Users (e2e)', () => {
       ).rejects.toThrow();
     });
 
-    it('constraint map: uq_users_registry → 409 application/problem+json', () => {
-      // Verify the constraint map has the correct entry
+    it('constraint map: uq_users_registry_active → 409 application/problem+json', () => {
       const filter = new QueryFailedErrorFilter({
         captureException: () => {},
       } as any);
@@ -124,7 +123,7 @@ describe('Users (e2e)', () => {
 
       const { QueryFailedError } = require('typeorm') as typeof import('typeorm');
       const err = new QueryFailedError('', [], {
-        constraint: 'uq_users_registry',
+        constraint: 'uq_users_registry_active',
         message: 'duplicate',
       } as any);
 
