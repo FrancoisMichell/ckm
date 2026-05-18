@@ -4,7 +4,11 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
+import { PasswordService } from '../common/utils/password.service';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { AuthService } from './auth.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { LocalStrategy } from './strategies/local.strategy';
 
 /**
  * AuthModule wires together:
@@ -12,8 +16,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
  * - PassportModule with default jwt strategy.
  * - TypeORM registration for the RefreshToken entity.
  * - UsersModule for credential validation.
- *
- * Strategies, guards, and AuthService are added in subsequent sub-steps.
+ * - AuthService + JwtStrategy + LocalStrategy.
  */
 @Module({
   imports: [
@@ -31,7 +34,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
     TypeOrmModule.forFeature([RefreshToken]),
   ],
   controllers: [],
-  providers: [],
-  exports: [JwtModule],
+  providers: [AuthService, JwtStrategy, LocalStrategy, PasswordService],
+  exports: [JwtModule, AuthService],
 })
 export class AuthModule {}
