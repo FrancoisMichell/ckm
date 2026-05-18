@@ -9,6 +9,7 @@ import { pinoConfig } from './common/logger/pino.config';
 import { NoopErrorReporter } from './common/error-reporter/noop-error-reporter';
 import { PasswordService } from './common/utils/password.service';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     // Feature modules
     // ------------------------------------------------------------------
     UsersModule,
+    AuthModule,
 
     // ------------------------------------------------------------------
     // TypeORM — connection from config; no synchronize, no auto-migrate.
