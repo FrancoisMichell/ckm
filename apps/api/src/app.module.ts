@@ -46,18 +46,29 @@ import { RolesGuard } from './auth/guards/roles.guard';
     // Throttler — global default 100 requests / 60s per IP.
     // POST /auth/login overrides this with @Throttle 5/60s.
     //
-    // The skipIf escape hatch honours `x-test-skip-throttle: 1` ONLY when
-    // NODE_ENV === 'test', so the e2e suite can disable the limit on
-    // setup/teardown requests while still exercising 429 in the dedicated
-    // throttler spec. The header is inert in development and production
-    // because the env check fails closed.
+    // The skipIf escape hatch is bound to BOTH:
+    //   1. NODE_ENV === 'test'                          (env gate)
+    //   2. x-test-skip-throttle header === bypass token (secret gate)
+    // The bypass token is a per-deploy secret loaded from
+    // THROTTLE_TEST_BYPASS_TOKEN (≥16 chars). If the token is unset —
+    // which is the production default — the secret-gate compares the
+    // header against `undefined` and fails closed. A misconfigured
+    // NODE_ENV=test deploy therefore cannot be bypassed by guessing the
+    // header name.
     // ------------------------------------------------------------------
-    ThrottlerModule.forRoot({
-      throttlers: [{ limit: 100, ttl: 60_000 }],
-      skipIf: (context: ExecutionContext): boolean => {
-        if (process.env['NODE_ENV'] !== 'test') return false;
-        const req = context.switchToHttp().getRequest<Request>();
-        return req.headers['x-test-skip-throttle'] === '1';
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const bypassToken = config.get<string>('throttle.testBypassToken');
+        return {
+          throttlers: [{ limit: 100, ttl: 60_000 }],
+          skipIf: (context: ExecutionContext): boolean => {
+            if (process.env['NODE_ENV'] !== 'test') return false;
+            if (!bypassToken) return false;
+            const req = context.switchToHttp().getRequest<Request>();
+            return req.headers['x-test-skip-throttle'] === bypassToken;
+          },
+        };
       },
     }),
 

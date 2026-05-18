@@ -12,10 +12,13 @@
  *   - 429 after exceeding the throttler limit on POST /auth/login (5/60s).
  *
  * Throttler isolation:
- *   Every non-throttler test sends `x-test-skip-throttle: 1`. AppModule wires
- *   `skipIf` to honour this header only when NODE_ENV === 'test', so the
- *   global ThrottlerGuard bypasses those requests. The dedicated 429 test
- *   omits the header to exercise the real 5/60s cap on /auth/login.
+ *   Every non-throttler test sends `x-test-skip-throttle: <token>` where
+ *   `<token>` is THROTTLE_TEST_BYPASS_TOKEN from .env.test. AppModule wires
+ *   `skipIf` to honour the header only when (a) NODE_ENV === 'test' AND
+ *   (b) the header value matches the configured bypass token. The token is
+ *   unset in production deploys, which makes the header inert there even
+ *   if NODE_ENV is misconfigured. The dedicated 429 test omits the header
+ *   to exercise the real 5/60s cap on /auth/login.
  *
  * Run with: pnpm --filter api test:e2e
  */
@@ -26,7 +29,16 @@ import { Belt, UserRoleType } from '@ckm/contracts';
 import { createTestApp } from './app.e2e-helper';
 import { UsersService } from '@/users/users.service';
 
-const SKIP_THROTTLE = { 'x-test-skip-throttle': '1' } as const;
+// Header value is read at module load (post jest-e2e-setup, which loads
+// .env.test before any test file). If the token is missing, fail loudly so
+// the test suite cannot accidentally rely on a defaulted bypass value.
+const BYPASS_TOKEN = process.env['THROTTLE_TEST_BYPASS_TOKEN'];
+if (!BYPASS_TOKEN) {
+  throw new Error(
+    'THROTTLE_TEST_BYPASS_TOKEN must be set in .env.test (≥16 chars) for the auth e2e suite.',
+  );
+}
+const SKIP_THROTTLE = { 'x-test-skip-throttle': BYPASS_TOKEN } as const;
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;

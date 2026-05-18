@@ -25,6 +25,12 @@ export const envValidationSchema = Joi.object({
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'trace')
     .default('info'),
+
+  // Optional per-deploy secret that the e2e helper uses to bypass the
+  // ThrottlerGuard for setup/teardown traffic. Must be ≥16 chars when set.
+  // Absent in production (and in any deploy that does not set it), which
+  // makes the bypass header inert there — fail-closed.
+  THROTTLE_TEST_BYPASS_TOKEN: Joi.string().min(16).optional(),
 });
 
 export default () => ({
@@ -56,5 +62,10 @@ export default () => ({
   },
   logging: {
     level: process.env['LOG_LEVEL'] ?? 'info',
+  },
+  throttle: {
+    // Test-only bypass token. Reads as undefined in production, which the
+    // ThrottlerModule.skipIf callback treats as fail-closed.
+    testBypassToken: process.env['THROTTLE_TEST_BYPASS_TOKEN'],
   },
 });

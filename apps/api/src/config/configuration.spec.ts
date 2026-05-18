@@ -55,4 +55,31 @@ describe('envValidationSchema', () => {
     expect(error).toBeUndefined();
     expect(value.NODE_ENV).toBe('development');
   });
+
+  it('THROTTLE_TEST_BYPASS_TOKEN is optional (production may omit it)', () => {
+    const { error } = envValidationSchema.validate(baseValid, {
+      allowUnknown: true,
+    });
+    expect(error).toBeUndefined();
+  });
+
+  it('THROTTLE_TEST_BYPASS_TOKEN rejects values shorter than 16 chars', () => {
+    const { error } = envValidationSchema.validate(
+      { ...baseValid, THROTTLE_TEST_BYPASS_TOKEN: 'short' },
+      { allowUnknown: true },
+    );
+    expect(error).toBeDefined();
+    expect(error!.message).toContain('THROTTLE_TEST_BYPASS_TOKEN');
+  });
+
+  it('THROTTLE_TEST_BYPASS_TOKEN accepts values ≥16 chars', () => {
+    const { error } = envValidationSchema.validate(
+      {
+        ...baseValid,
+        THROTTLE_TEST_BYPASS_TOKEN: 'a_token_of_at_least_16_chars',
+      },
+      { allowUnknown: true },
+    );
+    expect(error).toBeUndefined();
+  });
 });
