@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
@@ -10,6 +11,8 @@ import { NoopErrorReporter } from './common/error-reporter/noop-error-reporter';
 import { PasswordService } from './common/utils/password.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 
 @Module({
   imports: [
@@ -61,6 +64,10 @@ import { AuthModule } from './auth/auth.module';
     // ErrorReporter token — swap useClass for SentryErrorReporter when ready.
     { provide: 'ErrorReporter', useClass: NoopErrorReporter },
     PasswordService,
+    // Global guard chain — order matters: Jwt → Roles.
+    // Throttler guard is added in M8 alongside ThrottlerModule.
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
   exports: [PasswordService],
 })
