@@ -8,8 +8,10 @@ import { Params } from 'nestjs-pino';
  * - Structured JSON in production; pino-pretty single-line in development.
  * - Request IDs: honour inbound `x-request-id`; generate UUID v4 otherwise;
  *   echo the final ID back as `x-request-id` on the response.
- * - Redaction: `req.headers.authorization`, `req.headers.cookie`,
- *   `*.password`, `*.refresh_token` are redacted to `[Redacted]`.
+ * - Redaction: auth headers, cookies, credentials and access/refresh tokens,
+ *   and the bcrypt/SHA-256 hashes that identify refresh-token rows are all
+ *   redacted to `[Redacted]`. The hash paths are covered too because a leaked
+ *   `lookupHash` is equivalent to the plaintext token for DB indexing.
  */
 export const pinoConfig: Params = {
   pinoHttp: {
@@ -26,6 +28,11 @@ export const pinoConfig: Params = {
         'req.headers.cookie',
         '*.password',
         '*.refresh_token',
+        '*.access_token',
+        '*.tokenHash',
+        '*.lookupHash',
+        '*.token_hash',
+        '*.lookup_hash',
       ],
       censor: '[Redacted]',
     },
