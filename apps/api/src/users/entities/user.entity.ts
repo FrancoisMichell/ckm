@@ -18,14 +18,14 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   declare id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   declare name: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   declare registry: string | null;
 
   @Exclude()
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   declare password: string | null;
 
   @Column({ type: 'enum', enum: Belt, default: Belt.WHITE })
@@ -47,13 +47,13 @@ export class User {
   @OneToMany(() => UserRole, (r) => r.user, { cascade: true })
   declare roles: UserRole[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   declare createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   declare updatedAt: Date;
 
   @Exclude()
-  @DeleteDateColumn({ name: 'deleted_at' })
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz' })
   declare deletedAt: Date | null;
 }

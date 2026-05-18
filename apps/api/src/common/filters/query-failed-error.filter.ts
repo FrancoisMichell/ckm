@@ -29,13 +29,17 @@ export class QueryFailedErrorFilter implements ExceptionFilter {
     string,
     { status: number; title: string; detail: string }
   > = {
-    // Populated incrementally as migrations land (M3a onwards).
-    // e.g.:
-    // uq_users_registry: {
-    //   status: 409,
-    //   title: 'Registry already in use',
-    //   detail: 'A user with this registry already exists.',
-    // },
+    // M3a — users + user_roles
+    uq_users_registry: {
+      status: 409,
+      title: 'Registry already in use',
+      detail: 'A user with this registry already exists.',
+    },
+    uq_user_roles_user_role: {
+      status: 409,
+      title: 'Duplicate role',
+      detail: 'This user already has the requested role.',
+    },
   };
 
   constructor(private readonly reporter: ErrorReporter) {}

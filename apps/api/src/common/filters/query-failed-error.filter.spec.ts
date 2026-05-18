@@ -107,15 +107,37 @@ describe('QueryFailedErrorFilter', () => {
     });
   });
 
-  describe('known constraint → mapped response (future entries)', () => {
-    it('is ready to resolve known constraints once map is populated', () => {
-      // Verify the constraintMap is a regular object that can be extended.
-      // We access via casting since it's private — this mirrors what M3a tests will do
-      // once entries are added to the map.
+  describe('known constraint → mapped response', () => {
+    it('maps uq_users_registry to 409 Registry already in use', () => {
+      const { host, statusMock, jsonMock } = buildMockHost('/api/users');
+      const err = buildQueryFailedError('uq_users_registry');
+
+      filter.catch(err, host);
+
+      expect(statusMock).toHaveBeenCalledWith(409);
+      const body = jsonMock.mock.calls[0][0];
+      expect(body.status).toBe(409);
+      expect(body.title).toBe('Registry already in use');
+    });
+
+    it('maps uq_user_roles_user_role to 409 Duplicate role', () => {
+      const { host, statusMock, jsonMock } = buildMockHost('/api/users');
+      const err = buildQueryFailedError('uq_user_roles_user_role');
+
+      filter.catch(err, host);
+
+      expect(statusMock).toHaveBeenCalledWith(409);
+      const body = jsonMock.mock.calls[0][0];
+      expect(body.status).toBe(409);
+      expect(body.title).toBe('Duplicate role');
+    });
+
+    it('constraint map is a regular object (verifies structure)', () => {
       const internalMap = (filter as any).constraintMap as Record<string, unknown>;
       expect(typeof internalMap).toBe('object');
-      // At this stage (2.5) the map is intentionally empty.
-      expect(Object.keys(internalMap)).toHaveLength(0);
+      // M3a entries: uq_users_registry + uq_user_roles_user_role
+      expect(Object.keys(internalMap)).toContain('uq_users_registry');
+      expect(Object.keys(internalMap)).toContain('uq_user_roles_user_role');
     });
   });
 });
