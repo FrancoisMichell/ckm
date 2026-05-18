@@ -8,7 +8,7 @@
  */
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryFailedError } from 'typeorm';
 import { Belt, UserRoleType } from '@ckm/contracts';
 import { createTestApp } from './app.e2e-helper';
 import { UsersService } from '@/users/users.service';
@@ -121,7 +121,6 @@ describe('Users (e2e)', () => {
         }),
       } as any;
 
-      const { QueryFailedError } = require('typeorm') as typeof import('typeorm');
       const err = new QueryFailedError('', [], {
         constraint: 'uq_users_registry_active',
         message: 'duplicate',
