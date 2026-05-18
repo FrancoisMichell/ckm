@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
+import { ExecutionContext, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { Request } from 'express';
 import configuration, {
   envValidationSchema,
 } from './config/configuration';
@@ -31,6 +33,25 @@ import { RolesGuard } from './auth/guards/roles.guard';
     // Pino logger — global, structured JSON in production.
     // ------------------------------------------------------------------
     LoggerModule.forRoot(pinoConfig),
+
+    // ------------------------------------------------------------------
+    // Throttler — global default 100 requests / 60s per IP.
+    // POST /auth/login overrides this with @Throttle 5/60s.
+    //
+    // The skipIf escape hatch honours `x-test-skip-throttle: 1` ONLY when
+    // NODE_ENV === 'test', so the e2e suite can disable the limit on
+    // setup/teardown requests while still exercising 429 in the dedicated
+    // throttler spec. The header is inert in development and production
+    // because the env check fails closed.
+    // ------------------------------------------------------------------
+    ThrottlerModule.forRoot({
+      throttlers: [{ limit: 100, ttl: 60_000 }],
+      skipIf: (context: ExecutionContext): boolean => {
+        if (process.env['NODE_ENV'] !== 'test') return false;
+        const req = context.switchToHttp().getRequest<Request>();
+        return req.headers['x-test-skip-throttle'] === '1';
+      },
+    }),
 
     // ------------------------------------------------------------------
     // Feature modules
@@ -64,10 +85,11 @@ import { RolesGuard } from './auth/guards/roles.guard';
     // ErrorReporter token — swap useClass for SentryErrorReporter when ready.
     { provide: 'ErrorReporter', useClass: NoopErrorReporter },
     PasswordService,
-    // Global guard chain — order matters: Jwt → Roles.
-    // Throttler guard is added in M3b §3b.7 alongside the AuthController.
+    // Global guard chain — order matters: Jwt → Roles → Throttler.
+    // (NestJS executes APP_GUARDs in registration order.)
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [PasswordService],
 })
