@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   OnModuleInit,
   UnauthorizedException,
@@ -15,6 +16,7 @@ import { PasswordService } from '../common/utils/password.service';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { UserPayload } from './interfaces/user-payload.interface';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import { ErrorReporter } from '../common/error-reporter/error-reporter.interface';
 
 export interface AuthTokens {
   access_token: string;
@@ -48,6 +50,8 @@ export class AuthService implements OnModuleInit {
     private readonly jwtService: JwtService,
     private readonly passwordService: PasswordService,
     private readonly configService: ConfigService,
+    @Inject('ErrorReporter')
+    private readonly errorReporter: ErrorReporter,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -199,8 +203,19 @@ export class AuthService implements OnModuleInit {
     }
 
     // Replay detection: token was already consumed — revoke the entire family.
+    // If revocation itself fails (DB transient, connection drop), report it
+    // out-of-band so the operator can investigate, but still throw 401 to
+    // the user so the response shape is consistent. Without the try/catch
+    // the user would see a 500 and the family would silently stay active.
     if (existingRow.revoked) {
-      await this.revokeFamilyById(existingRow.familyId);
+      try {
+        await this.revokeFamilyById(existingRow.familyId);
+      } catch (err) {
+        this.errorReporter.captureException(err, {
+          where: 'AuthService.refresh.revokeFamily',
+          familyId: existingRow.familyId,
+        });
+      }
       throw new UnauthorizedException(
         'Refresh token reuse detected. All sessions revoked.',
       );

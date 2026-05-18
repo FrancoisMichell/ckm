@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TestBed } from '@suites/unit';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Belt, UserRoleType } from '@ckm/contracts';

@@ -65,7 +65,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     { provide: 'ErrorReporter', useClass: NoopErrorReporter },
     PasswordService,
     // Global guard chain — order matters: Jwt → Roles.
-    // Throttler guard is added in M8 alongside ThrottlerModule.
+    // Throttler guard is added in M3b §3b.7 alongside the AuthController.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

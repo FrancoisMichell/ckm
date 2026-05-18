@@ -57,6 +57,16 @@ function makePasswordService(): jest.Mocked<PasswordService> {
   } as unknown as jest.Mocked<PasswordService>;
 }
 
+interface ErrorReporterMock {
+  captureException: jest.Mock;
+}
+
+function makeErrorReporter(): ErrorReporterMock {
+  return {
+    captureException: jest.fn(),
+  };
+}
+
 function makeUsersService(user: User | null): jest.Mocked<Pick<UsersService, 'findByRegistry'>> {
   return {
     findByRegistry: jest.fn().mockResolvedValue(user),
@@ -93,6 +103,7 @@ function buildService(opts: {
   const jwtService = makeJwtService();
   const passwordService = makePasswordService();
   const configService = makeConfigService(opts.configOverrides);
+  const errorReporter = makeErrorReporter();
 
   const service = new AuthService(
     repo as unknown as Repository<RefreshToken>,
@@ -100,9 +111,19 @@ function buildService(opts: {
     jwtService,
     passwordService,
     configService,
+    errorReporter,
   );
 
-  return { service, repo, saved, usersService, jwtService, passwordService, configService };
+  return {
+    service,
+    repo,
+    saved,
+    usersService,
+    jwtService,
+    passwordService,
+    configService,
+    errorReporter,
+  };
 }
 
 /** Build + run onModuleInit so dummyPasswordHash is populated. */
@@ -394,6 +415,7 @@ function buildRefreshService(opts: {
   const jwtService = makeJwtService();
   const passwordService = makePasswordService();
   const configService = makeConfigService();
+  const errorReporter = makeErrorReporter();
 
   const service = new AuthService(
     repo as unknown as Repository<RefreshToken>,
@@ -401,6 +423,7 @@ function buildRefreshService(opts: {
     jwtService,
     passwordService,
     configService,
+    errorReporter,
   );
 
   return {
@@ -412,6 +435,7 @@ function buildRefreshService(opts: {
     usersService,
     transactionMock,
     emMock,
+    errorReporter,
   };
 }
 
@@ -516,6 +540,34 @@ describe('AuthService.refresh', () => {
     // The query builder should have been used to revoke the family
     expect(qbUpdates).toHaveLength(1);
     expect(qbUpdates[0].familyId).toBe(FAMILY_ID);
+  });
+
+  it('REPLAY: still returns 401 and reports via ErrorReporter when family revocation throws', async () => {
+    const revokedRow = await makeActiveTokenRow(RAW_TOKEN, FAMILY_ID, {
+      revoked: true,
+    });
+    const { service, repo, errorReporter } = buildRefreshService({
+      existingRow: revokedRow,
+    });
+
+    // Sabotage the family-revocation query so it throws.
+    const revocationError = new Error('connection reset by peer');
+    (repo.createQueryBuilder as jest.Mock).mockImplementation(() => {
+      throw revocationError;
+    });
+
+    // The user-facing response must still be 401, not a 500.
+    await expect(service.refresh(RAW_TOKEN)).rejects.toThrow(
+      UnauthorizedException,
+    );
+
+    // The revocation failure must surface via ErrorReporter so operators
+    // can investigate (the family otherwise silently stays active).
+    expect(errorReporter.captureException).toHaveBeenCalledTimes(1);
+    expect(errorReporter.captureException).toHaveBeenCalledWith(
+      revocationError,
+      expect.objectContaining({ familyId: FAMILY_ID }),
+    );
   });
 });
 
