@@ -9,6 +9,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from '../common/decorators';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -35,6 +41,7 @@ import { RequestWithUser } from '../common/interfaces/request-with-user.interfac
  *  - `@Public()` skips JwtAuthGuard. `@Roles()` is intentionally omitted from
  *    /auth/me and /auth/logout — any authenticated role may call them.
  */
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -51,6 +58,13 @@ export class AuthController {
    * Rate-limited to 5 requests per 60 seconds (per IP) via @Throttle override
    * on top of the global ThrottlerModule default (100/60s).
    */
+  @ApiOperation({
+    summary: 'Issue access + refresh tokens for a registry/password pair',
+  })
+  @ApiResponse({ status: 200, description: 'Tokens issued.' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials (problem+json).' })
+  @ApiResponse({ status: 422, description: 'Malformed payload (problem+json).' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded (5/60s).' })
   @Public()
   @UseGuards(LocalAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -76,6 +90,14 @@ export class AuthController {
    * in AuthService.refresh. Presenting a previously-rotated token revokes the
    * entire family and returns 401.
    */
+  @ApiOperation({
+    summary: 'Rotate refresh token; replay revokes the entire family',
+  })
+  @ApiResponse({ status: 200, description: 'New tokens issued.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token unknown, expired, or revoked (problem+json).',
+  })
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
@@ -95,6 +117,10 @@ export class AuthController {
    * Idempotent: an unknown token returns 204 without error so a client can
    * retry without checking the previous response.
    */
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Revoke a single refresh token (idempotent)' })
+  @ApiResponse({ status: 204, description: 'Token revoked (or no-op).' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid bearer token.' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('logout')
   async logout(@Body() body: RefreshTokenDto): Promise<void> {
@@ -110,6 +136,10 @@ export class AuthController {
    * hit the database — controllers needing fresh entity data should query the
    * repository with `currentUser.id`.
    */
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Echo the current user payload from the JWT' })
+  @ApiResponse({ status: 200, description: 'Current user payload.' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid bearer token.' })
   @Get('me')
   me(@CurrentUser() user: UserPayload): UserPayload {
     return user;

@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsString, MinLength } from 'class-validator';
 
 /**
@@ -11,6 +12,10 @@ import { IsString, MinLength } from 'class-validator';
  * response body, so a client can echo back the same field without renaming.
  */
 export class RefreshTokenDto {
+  @ApiProperty({
+    description:
+      'Opaque base64url refresh token issued by /auth/login (never a JWT).',
+  })
   @IsString()
   @MinLength(1)
   declare refresh_token: string;

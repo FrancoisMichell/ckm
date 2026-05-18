@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsString, MinLength } from 'class-validator';
 
 /**
@@ -12,10 +13,18 @@ import { IsString, MinLength } from 'class-validator';
  * mode strips any extra fields before this DTO is validated.
  */
 export class LoginDto {
+  @ApiProperty({
+    description: 'Academy registry number (PT-BR "Registro").',
+    example: '0001',
+  })
   @IsString()
   @MinLength(1)
   declare registry: string;
 
+  @ApiProperty({
+    description: 'Plaintext password (bcrypt-compared server-side).',
+    example: 'correct-horse-battery-staple',
+  })
   @IsString()
   @MinLength(1)
   declare password: string;
