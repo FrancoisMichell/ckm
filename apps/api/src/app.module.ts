@@ -8,6 +8,7 @@ import configuration, {
 import { pinoConfig } from './common/logger/pino.config';
 import { NoopErrorReporter } from './common/error-reporter/noop-error-reporter';
 import { PasswordService } from './common/utils/password.service';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -26,6 +27,11 @@ import { PasswordService } from './common/utils/password.service';
     // Pino logger — global, structured JSON in production.
     // ------------------------------------------------------------------
     LoggerModule.forRoot(pinoConfig),
+
+    // ------------------------------------------------------------------
+    // Feature modules
+    // ------------------------------------------------------------------
+    UsersModule,
 
     // ------------------------------------------------------------------
     // TypeORM — connection from config; no synchronize, no auto-migrate.
