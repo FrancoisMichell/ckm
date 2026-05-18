@@ -212,6 +212,8 @@ export class AuthService implements OnModuleInit {
     }
 
     // Rotate: build the new token first so we can set replaced_by on the old row.
+    // The bcrypt hash, SHA-256 lookup hash, and randomBytes call are pure
+    // and stay outside the transaction — only the two DB writes need atomicity.
     const rawNewToken = randomBytes(48).toString('base64url');
     const newLookupHash = this.sha256(rawNewToken);
     const newTokenHash = await this.hashRefreshToken(rawNewToken);
@@ -222,22 +224,27 @@ export class AuthService implements OnModuleInit {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + refreshTtlDays);
 
-    const newRow = this.refreshTokenRepo.create({
-      userId: existingRow.userId,
-      tokenHash: newTokenHash,
-      lookupHash: newLookupHash,
-      familyId: existingRow.familyId, // same family
-      replacedBy: null,
-      revoked: false,
-      expiresAt,
-    });
+    // Atomic rotation: insert the new row AND mark the old row consumed in
+    // a single transaction. Without this, a crash between the two writes
+    // would leave the family with a new active row AND the old row still
+    // accepting replays — silently defeating replay detection.
+    await this.refreshTokenRepo.manager.transaction(async (em) => {
+      const newRow = em.create(RefreshToken, {
+        userId: existingRow.userId,
+        tokenHash: newTokenHash,
+        lookupHash: newLookupHash,
+        familyId: existingRow.familyId, // same family
+        replacedBy: null,
+        revoked: false,
+        expiresAt,
+      });
 
-    const savedNewRow = await this.refreshTokenRepo.save(newRow);
+      const savedNewRow = await em.save(newRow);
 
-    // Mark the old row consumed
-    await this.refreshTokenRepo.update(existingRow.id, {
-      revoked: true,
-      replacedBy: savedNewRow.id,
+      await em.update(RefreshToken, existingRow.id, {
+        revoked: true,
+        replacedBy: savedNewRow.id,
+      });
     });
 
     // Issue new access token — load the user to get current roles snapshot

@@ -330,6 +330,38 @@ function buildRefreshService(opts: {
     execute: jest.fn().mockResolvedValue({ affected: familyRows.length }),
   };
 
+  // EntityManager mock used inside the rotation transaction. Mirrors the
+  // shape of the repository mock for create/save/update so refresh's TX body
+  // is exercised without a real DataSource.
+  const emMock = {
+    create: jest
+      .fn()
+      .mockImplementation((_entity: unknown, data: Partial<RefreshToken>) => {
+        return Object.assign(new RefreshToken(), {
+          id: 'new-token-row-id',
+          ...data,
+        });
+      }),
+    save: jest.fn().mockImplementation(async (entity: RefreshToken) => {
+      savedRows.push(entity);
+      return entity;
+    }),
+    update: jest
+      .fn()
+      .mockImplementation(
+        async (_entity: unknown, id: string, patch: Partial<RefreshToken>) => {
+          updateCalls.push({ id, patch });
+          return { affected: 1 };
+        },
+      ),
+  };
+
+  const transactionMock = jest
+    .fn()
+    .mockImplementation(async (cb: (em: typeof emMock) => Promise<unknown>) => {
+      return cb(emMock);
+    });
+
   const repo = {
     findOne: jest.fn().mockImplementation(async ({ where }: { where: { lookupHash?: string } }) => {
       if (!existingRow) return null;
@@ -351,6 +383,7 @@ function buildRefreshService(opts: {
     }),
     createQueryBuilder: jest.fn().mockReturnValue(qbMock),
     find: jest.fn().mockResolvedValue(familyRows),
+    manager: { transaction: transactionMock },
   };
 
   const user = makeUser();
@@ -370,7 +403,16 @@ function buildRefreshService(opts: {
     configService,
   );
 
-  return { service, repo, savedRows, updateCalls, qbUpdates, usersService };
+  return {
+    service,
+    repo,
+    savedRows,
+    updateCalls,
+    qbUpdates,
+    usersService,
+    transactionMock,
+    emMock,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -421,6 +463,29 @@ describe('AuthService.refresh', () => {
 
     expect(savedRows).toHaveLength(1);
     expect(savedRows[0].familyId).toBe(FAMILY_ID);
+  });
+
+  it('rotation runs inside refreshTokenRepo.manager.transaction (atomicity)', async () => {
+    const existingRow = await makeActiveTokenRow(RAW_TOKEN, FAMILY_ID);
+    const { service, transactionMock, emMock, savedRows, updateCalls } =
+      buildRefreshService({ existingRow });
+
+    await service.refresh(RAW_TOKEN);
+
+    // Transaction wrapper must be invoked exactly once.
+    expect(transactionMock).toHaveBeenCalledTimes(1);
+    expect(transactionMock).toHaveBeenCalledWith(expect.any(Function));
+
+    // Both writes — new-row save and old-row update — must go through the
+    // EntityManager passed into the transaction callback, NOT through the
+    // repository directly. This guarantees they commit atomically.
+    expect(emMock.save).toHaveBeenCalledTimes(1);
+    expect(emMock.update).toHaveBeenCalledTimes(1);
+    expect(savedRows).toHaveLength(1);
+    expect(updateCalls).toHaveLength(1);
+    expect(updateCalls[0].id).toBe('token-row-id');
+    expect(updateCalls[0].patch.revoked).toBe(true);
+    expect(updateCalls[0].patch.replacedBy).toBe('new-token-row-id');
   });
 
   it('REPLAY: throws UnauthorizedException when token is already revoked', async () => {
