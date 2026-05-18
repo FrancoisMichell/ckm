@@ -2,6 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { RefreshToken } from './entities/refresh-token.entity';
@@ -104,6 +105,15 @@ function buildService(opts: {
   return { service, repo, saved, usersService, jwtService, passwordService, configService };
 }
 
+/** Build + run onModuleInit so dummyPasswordHash is populated. */
+async function buildInitializedService(
+  opts: Parameters<typeof buildService>[0],
+) {
+  const built = buildService(opts);
+  await built.service.onModuleInit();
+  return built;
+}
+
 // ---------------------------------------------------------------------------
 // validateCredentials
 // ---------------------------------------------------------------------------
@@ -111,7 +121,7 @@ function buildService(opts: {
 describe('AuthService.validateCredentials', () => {
   it('returns UserPayload for a valid teacher with matching password', async () => {
     const user = makeUser();
-    const { service, passwordService } = buildService({ user });
+    const { service, passwordService } = await buildInitializedService({ user });
     (passwordService.compare as jest.Mock).mockResolvedValue(true);
 
     const result = await service.validateCredentials('PROF001', 'password123');
@@ -125,16 +135,49 @@ describe('AuthService.validateCredentials', () => {
   });
 
   it('throws UnauthorizedException when user not found', async () => {
-    const { service } = buildService({ user: null });
+    const { service } = await buildInitializedService({ user: null });
 
     await expect(
       service.validateCredentials('UNKNOWN', 'anything'),
     ).rejects.toThrow(UnauthorizedException);
   });
 
+  it('calls passwordService.compare even when the user is not found (timing-oracle guard)', async () => {
+    const { service, passwordService } = await buildInitializedService({
+      user: null,
+    });
+    (passwordService.compare as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      service.validateCredentials('UNKNOWN', 'anything'),
+    ).rejects.toThrow(UnauthorizedException);
+
+    // bcrypt.compare MUST run on the missing-user path, against the dummy hash,
+    // so the wall-clock timing matches the found-user path.
+    expect(passwordService.compare).toHaveBeenCalledTimes(1);
+    const [supplied, hash] = (passwordService.compare as jest.Mock).mock
+      .calls[0];
+    expect(supplied).toBe('anything');
+    // The dummy hash must be a real bcrypt digest, not an empty string.
+    expect(typeof hash).toBe('string');
+    expect(hash).toMatch(/^\$2[aby]\$/);
+  });
+
+  it('calls passwordService.compare even when the user has no password column', async () => {
+    const user = makeUser({ password: null as unknown as string });
+    const { service, passwordService } = await buildInitializedService({ user });
+    (passwordService.compare as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      service.validateCredentials('PROF001', 'anything'),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(passwordService.compare).toHaveBeenCalledTimes(1);
+  });
+
   it('throws UnauthorizedException when password does not match', async () => {
     const user = makeUser();
-    const { service, passwordService } = buildService({ user });
+    const { service, passwordService } = await buildInitializedService({ user });
     (passwordService.compare as jest.Mock).mockResolvedValue(false);
 
     await expect(
@@ -142,19 +185,10 @@ describe('AuthService.validateCredentials', () => {
     ).rejects.toThrow(UnauthorizedException);
   });
 
-  it('throws UnauthorizedException when user is soft-deleted', async () => {
-    const user = makeUser({ deletedAt: new Date() });
-    const { service } = buildService({ user });
-
-    await expect(
-      service.validateCredentials('PROF001', 'password123'),
-    ).rejects.toThrow(UnauthorizedException);
-  });
-
   it('throws UnauthorizedException when user has no TEACHER role', async () => {
     const studentRole = Object.assign(new UserRole(), { role: UserRoleType.STUDENT });
     const user = makeUser({ roles: [studentRole] });
-    const { service, passwordService } = buildService({ user });
+    const { service, passwordService } = await buildInitializedService({ user });
     (passwordService.compare as jest.Mock).mockResolvedValue(true);
 
     await expect(
@@ -255,10 +289,7 @@ async function makeActiveTokenRow(
   overrides: Partial<RefreshToken> = {},
 ): Promise<RefreshToken> {
   const tokenHash = await bcrypt.hash(rawToken, 4);
-  const lookupHash = require('crypto')
-    .createHash('sha256')
-    .update(rawToken)
-    .digest('hex');
+  const lookupHash = createHash('sha256').update(rawToken).digest('hex');
 
   return Object.assign(new RefreshToken(), {
     id: 'token-row-id',

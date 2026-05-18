@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -27,7 +31,16 @@ export interface AuthTokens {
  *  - 3b.6: refresh, logout
  */
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
+  /**
+   * Constant dummy bcrypt hash used to keep `validateCredentials` wall-clock
+   * timing uniform across the user-missing / no-password / mismatch branches.
+   * Computed once at module init using the configured production salt rounds.
+   * The value is meaningless — we discard the comparison result and only
+   * exercise bcrypt to neutralise the registry-enumeration side channel.
+   */
+  private dummyPasswordHash!: string;
+
   constructor(
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepo: Repository<RefreshToken>,
@@ -36,6 +49,14 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly configService: ConfigService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    const rounds = this.configService.getOrThrow<number>(
+      'security.bcryptSaltRounds',
+    );
+    // Async hash — never use hashSync; cost must match production rounds.
+    this.dummyPasswordHash = await bcrypt.hash('invalid', rounds);
+  }
 
   // ---------------------------------------------------------------------------
   // Credential validation (3b.3)
@@ -49,7 +70,16 @@ export class AuthService {
    * - 401 if user has no password set.
    * - 401 if bcrypt comparison fails.
    * - 401 if user has no TEACHER role.
-   * - 401 if user is soft-deleted.
+   *
+   * Timing: bcrypt.compare runs on every code path before any 401 — including
+   * the user-missing and null-password branches (against a constant dummy hash)
+   * — so the wall-clock cost of all failure modes is dominated by bcrypt and
+   * indistinguishable to a network attacker. Closes the registry-enumeration
+   * side channel.
+   *
+   * Note: soft-deleted users are already filtered by `findByRegistry` via
+   * TypeORM's `@DeleteDateColumn` — they naturally fall into the missing-user
+   * branch and inherit the same timing profile.
    *
    * Returns the UserPayload on success; throws UnauthorizedException on failure.
    */
@@ -59,15 +89,19 @@ export class AuthService {
   ): Promise<UserPayload> {
     const user = await this.usersService.findByRegistry(registry);
 
-    if (!user || !user.password || user.deletedAt) {
-      throw new UnauthorizedException('Invalid credentials.');
-    }
+    // Pick the hash to compare against. When the user is missing or has no
+    // password column, use the precomputed dummy hash so bcrypt still runs.
+    const hashToCompare =
+      user && user.password ? user.password : this.dummyPasswordHash;
 
     const passwordMatch = await this.passwordService.compare(
       password,
-      user.password,
+      hashToCompare,
     );
-    if (!passwordMatch) {
+
+    // Single failure path covers: missing user, null password, mismatched
+    // password. Identical exception, identical timing.
+    if (!user || !user.password || !passwordMatch) {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
