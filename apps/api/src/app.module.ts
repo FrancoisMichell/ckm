@@ -9,7 +9,7 @@ import configuration, {
   envValidationSchema,
 } from './config/configuration';
 import { pinoConfig } from './common/logger/pino.config';
-import { NoopErrorReporter } from './common/error-reporter/noop-error-reporter';
+import { ErrorReporterModule } from './common/error-reporter/error-reporter.module';
 import { PasswordService } from './common/utils/password.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -33,6 +33,14 @@ import { RolesGuard } from './auth/guards/roles.guard';
     // Pino logger — global, structured JSON in production.
     // ------------------------------------------------------------------
     LoggerModule.forRoot(pinoConfig),
+
+    // ------------------------------------------------------------------
+    // ErrorReporter — single @Global() binding for the 'ErrorReporter'
+    // token. Swap NoopErrorReporter for SentryErrorReporter (etc.) in
+    // ErrorReporterModule when introducing a real reporter; no other
+    // module needs to change.
+    // ------------------------------------------------------------------
+    ErrorReporterModule,
 
     // ------------------------------------------------------------------
     // Throttler — global default 100 requests / 60s per IP.
@@ -82,8 +90,6 @@ import { RolesGuard } from './auth/guards/roles.guard';
   ],
   controllers: [],
   providers: [
-    // ErrorReporter token — swap useClass for SentryErrorReporter when ready.
-    { provide: 'ErrorReporter', useClass: NoopErrorReporter },
     PasswordService,
     // Global guard chain — order matters: Jwt → Roles → Throttler.
     // (NestJS executes APP_GUARDs in registration order.)

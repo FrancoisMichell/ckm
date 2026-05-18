@@ -5,7 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { PasswordService } from '../common/utils/password.service';
-import { NoopErrorReporter } from '../common/error-reporter/noop-error-reporter';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -41,13 +40,9 @@ import { LocalStrategy } from './strategies/local.strategy';
     JwtStrategy,
     LocalStrategy,
     PasswordService,
-    // Module-local fallback for the `ErrorReporter` token. AppModule binds
-    // the production-grade reporter (Noop today, Sentry later) via the same
-    // token; this entry is necessary because providers declared on the root
-    // module are NOT auto-visible inside child modules' DI scopes — without
-    // it, AuthService cannot resolve `@Inject('ErrorReporter')`. Swap both
-    // bindings together when introducing a real reporter.
-    { provide: 'ErrorReporter', useClass: NoopErrorReporter },
+    // ErrorReporter is provided by the @Global() ErrorReporterModule
+    // (imported once in AppModule), so it is resolvable here without a
+    // local binding.
   ],
   exports: [JwtModule, AuthService],
 })
