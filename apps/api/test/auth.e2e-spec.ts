@@ -124,6 +124,59 @@ describe('Auth (e2e)', () => {
       expect(wholeBody).not.toMatch(/"lookup_hash"/);
     });
 
+    it('GET /auth/me with no Authorization header returns 401 problem+json', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set(SKIP_THROTTLE);
+
+      expect(res.status).toBe(401);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+      expect(res.body.status).toBe(401);
+      expect(typeof res.body.title).toBe('string');
+      expect(res.body.instance).toBe('/auth/me');
+      expect(res.body.type).toMatch(/^https:\/\/api\.ckm\.dev\/problems\//);
+    });
+
+    it('GET /auth/me with a malformed/tampered JWT returns 401 problem+json', async () => {
+      // First: completely malformed token — passport-jwt rejects on parse.
+      const malformed = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', 'Bearer not.a.jwt');
+
+      expect(malformed.status).toBe(401);
+      expect(malformed.headers['content-type']).toMatch(
+        /application\/problem\+json/,
+      );
+      expect(malformed.body.status).toBe(401);
+
+      // Second: structurally valid JWT with its signature mutated — passport-jwt
+      // rejects on signature verification against the configured secret.
+      const teacher = await seedTeacher(nextRegistry());
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .set(SKIP_THROTTLE)
+        .send({ registry: teacher.registry, password: teacher.password });
+      expect(login.status).toBe(200);
+      const goodToken = login.body.access_token as string;
+      const [header, payload, signature] = goodToken.split('.');
+      // Flip the last char of the signature to break verification while
+      // keeping the JWT structurally valid (header.payload.signature).
+      const lastChar = signature.slice(-1);
+      const flipped = lastChar === 'A' ? 'B' : 'A';
+      const tampered = `${header}.${payload}.${signature.slice(0, -1)}${flipped}`;
+
+      const res = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${tampered}`);
+
+      expect(res.status).toBe(401);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+      expect(res.body.status).toBe(401);
+      expect(res.body.instance).toBe('/auth/me');
+    });
+
     it('GET /auth/me echoes the JWT payload without leaking sensitive fields', async () => {
       const teacher = await seedTeacher(nextRegistry());
 
