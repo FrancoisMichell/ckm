@@ -13,6 +13,7 @@ import { ErrorReporterModule } from './common/error-reporter/error-reporter.modu
 import { PasswordService } from './common/utils/password.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { StudentsModule } from './students/students.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -77,6 +78,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     // ------------------------------------------------------------------
     UsersModule,
     AuthModule,
+    StudentsModule,
 
     // ------------------------------------------------------------------
     // TypeORM — connection from config; no synchronize, no auto-migrate.
