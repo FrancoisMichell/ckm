@@ -1,4 +1,5 @@
 import {
+  ArrayMinSize,
   IsArray,
   IsEnum,
   IsInt,
@@ -40,17 +41,18 @@ export class CreateClassDto {
     example: ['monday', 'wednesday', 'friday'],
   })
   @IsArray()
+  @ArrayMinSize(1)
   @IsEnum(DayOfWeekValue, { each: true })
   declare days: DayOfWeekValue[];
 
   @ApiProperty({
-    description: 'Start time in HH:MM format',
+    description: 'Start time in HH:MM format (00:00–23:59)',
     example: '07:30',
-    pattern: '^\\d{2}:\\d{2}$',
+    pattern: '^([01]\\d|2[0-3]):[0-5]\\d$',
   })
   @IsString()
-  @Matches(/^\d{2}:\d{2}$/, {
-    message: 'startTime must be in HH:MM format',
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'startTime must be a valid HH:MM time (00:00–23:59)',
   })
   declare startTime: string;
 
