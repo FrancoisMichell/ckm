@@ -93,7 +93,7 @@ export class StudentsService {
       throw new NotFoundException('Student not found');
     }
 
-    return student!;
+    return student;
   }
 
   /**
