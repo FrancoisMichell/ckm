@@ -41,6 +41,32 @@ export class QueryFailedErrorFilter implements ExceptionFilter {
       title: 'Duplicate role',
       detail: 'This user already has the requested role.',
     },
+    // M5 — classes + enrollments
+    chk_classes_duration: {
+      status: 422,
+      title: 'Invalid class duration',
+      detail: 'durationMinutes must be between 30 and 300.',
+    },
+    fk_classes_teacher_id: {
+      status: 422,
+      title: 'Invalid teacher',
+      detail: 'The referenced teacher does not exist.',
+    },
+    fk_class_enrollments_class: {
+      status: 422,
+      title: 'Invalid class',
+      detail: 'The referenced class does not exist.',
+    },
+    fk_class_enrollments_user: {
+      status: 422,
+      title: 'Invalid student',
+      detail: 'The referenced student does not exist.',
+    },
+    uq_class_enrollments_active: {
+      status: 409,
+      title: 'Already enrolled',
+      detail: 'This student is already enrolled in this class.',
+    },
   };
 
   constructor(private readonly reporter: ErrorReporter) {}
