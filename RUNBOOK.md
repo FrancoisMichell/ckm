@@ -69,8 +69,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [x] Session 16 — M4 audit + PR (Sonnet + skill) — done 2026-05-20
 - [x] Session 17 — M5 Classes + enrollments work (Sonnet) — done 2026-05-23
 - [x] Session 18 — M5 audit + PR (Sonnet + skill) — done 2026-05-23
-- [ ] Session 19 — M6 ClassSessions work (Sonnet)
-- [ ] Session 20 — M6 audit + PR (Sonnet + skill)
+- [x] Session 19 — M6 ClassSessions work (Sonnet) — done 2026-05-24
+- [x] Session 20 — M6 audit + PR (Sonnet + skill) — done 2026-05-24
 - [ ] Session 21 — M7 Attendances work (Sonnet)
 - [ ] Session 22 — M7 audit + PR (Opus + skill — PII + audit invariant)
 - [ ] Session 23 — M8 Health + wiring + seeds work (Sonnet)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Sessions 1–18 complete (M0–M5 merged). M5 (PR #7) landed Classes + Enrollments module: teacher-scoped CRUD, idempotent enroll/unenroll with soft-delete restore semantics, migration 5 with named constraints, 22 e2e tests. Audit: CLEAN, no blockers. Security review: no findings above confidence threshold.
-**Next session**: Session 19 — M6 ClassSessions work (Sonnet, `api-developer` agent, branch `feat/m06-class-sessions`).
+**Current state**: Sessions 1–20 complete (M0–M6 merged). M6 (PR #8) landed ClassSessions module: dated occurrences of recurring classes, full CRUD + soft-delete restore, start/end lifecycle with all five state-machine guards, three collection reads (by-class, by-teacher, by-date-range), migration 6 with named constraints and partial unique index. Audit: PASS, no blockers. Security review: no findings above confidence threshold.
+**Next session**: Session 21 — M7 Attendances work (Sonnet, `api-developer` agent, branch `feat/m07-attendances`).
 
 ---
 
