@@ -67,6 +67,17 @@ export class QueryFailedErrorFilter implements ExceptionFilter {
       title: 'Already enrolled',
       detail: 'This student is already enrolled in this class.',
     },
+    // M6 — class_sessions
+    uq_class_sessions_class_date_active: {
+      status: 409,
+      title: 'Duplicate session',
+      detail: 'A session already exists for this class on this date.',
+    },
+    fk_class_sessions_class: {
+      status: 422,
+      title: 'Invalid class',
+      detail: 'The referenced class does not exist.',
+    },
   };
 
   constructor(private readonly reporter: ErrorReporter) {}

@@ -55,20 +55,20 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [x] Session 2 — M0 docs + CLAUDE.md + agents + CI (Opus) — done 2026-05-17
 - [x] Session 3 — M0 audit + PR (Sonnet, no skill) — done 2026-05-17
 - [x] Session 4 — M1 contracts work (Sonnet) — done 2026-05-17
-- [ ] Session 5 — M1 audit + PR (Sonnet, no skill)
-- [ ] Session 6 — M2 NestJS scaffold + config + common scaffolding (Sonnet)
-- [ ] Session 7 — M2 error handling + logger + Dockerfile (Sonnet)
-- [ ] Session 8 — M2 audit + PR (Sonnet + skill)
-- [ ] Session 9 — M3a Users data layer work (Sonnet)
-- [ ] Session 10 — M3a audit + PR (Sonnet + skill)
-- [ ] Session 11 — M3b Auth foundation 3b.1–3b.6 (Sonnet)
-- [ ] Session 12 — M3b mid-milestone audit (Opus + skill)
-- [ ] Session 13 — M3b controller + e2e 3b.7 (Sonnet)
-- [ ] Session 14 — M3b final audit + PR (Opus + skill)
-- [ ] Session 15 — M4 Students work (Sonnet)
-- [ ] Session 16 — M4 audit + PR (Sonnet + skill)
-- [ ] Session 17 — M5 Classes + enrollments work (Sonnet)
-- [ ] Session 18 — M5 audit + PR (Sonnet + skill)
+- [x] Session 5 — M1 audit + PR (Sonnet, no skill) — done 2026-05-17
+- [x] Session 6 — M2 NestJS scaffold + config + common scaffolding (Sonnet) — done 2026-05-17
+- [x] Session 7 — M2 error handling + logger + Dockerfile (Sonnet) — done 2026-05-17
+- [x] Session 8 — M2 audit + PR (Sonnet + skill) — done 2026-05-17
+- [x] Session 9 — M3a Users data layer work (Sonnet) — done 2026-05-17
+- [x] Session 10 — M3a audit + PR (Sonnet + skill) — done 2026-05-17
+- [x] Session 11 — M3b Auth foundation 3b.1–3b.6 (Sonnet) — done 2026-05-17
+- [x] Session 12 — M3b mid-milestone audit (Opus + skill) — done 2026-05-17
+- [x] Session 13 — M3b controller + e2e 3b.7 (Sonnet) — done 2026-05-17
+- [x] Session 14 — M3b final audit + PR (Opus + skill) — done 2026-05-17
+- [x] Session 15 — M4 Students work (Sonnet) — done 2026-05-18
+- [x] Session 16 — M4 audit + PR (Sonnet + skill) — done 2026-05-20
+- [x] Session 17 — M5 Classes + enrollments work (Sonnet) — done 2026-05-23
+- [x] Session 18 — M5 audit + PR (Sonnet + skill) — done 2026-05-23
 - [ ] Session 19 — M6 ClassSessions work (Sonnet)
 - [ ] Session 20 — M6 audit + PR (Sonnet + skill)
 - [ ] Session 21 — M7 Attendances work (Sonnet)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Sessions 1–4 complete (2026-05-17). M0 merged to `main` (PR #1). M1 done on `feat/m01-contracts`: `packages/contracts` v0 shipped — `Belt` / `AttendanceStatus` / `DayOfWeek` / `UserRoleName` enums, branded ID types (`UserId`, `ClassId`, `SessionId`, `AttendanceId`), `BELT_CONFIGS` with PT-BR labels, `BELT_ORDER` tuple + `beltRank` / `compareBelts`, `getSessionStatus` pure helper. 13/13 vitest tests green; `pnpm --filter contracts typecheck | test | build` all pass.
-**Next session**: Session 5 — M1 audit + PR (Sonnet, no skill).
+**Current state**: Sessions 1–18 complete (M0–M5 merged). M5 (PR #7) landed Classes + Enrollments module: teacher-scoped CRUD, idempotent enroll/unenroll with soft-delete restore semantics, migration 5 with named constraints, 22 e2e tests. Audit: CLEAN, no blockers. Security review: no findings above confidence threshold.
+**Next session**: Session 19 — M6 ClassSessions work (Sonnet, `api-developer` agent, branch `feat/m06-class-sessions`).
 
 ---
 
