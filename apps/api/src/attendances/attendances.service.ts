@@ -5,6 +5,7 @@ import { AttendanceStatus } from '@ckm/contracts';
 import { Attendance } from './attendance.entity';
 import { ClassSession } from '@/class-sessions/class-session.entity';
 import { ClassEnrollment } from '@/classes/entities/class-enrollment.entity';
+import { User } from '@/users/entities/user.entity';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { QueryAttendancesDto } from './dto/query-attendances.dto';
 import { UpdateAttendanceNotesDto } from './dto/update-attendance-notes.dto';
@@ -43,6 +44,8 @@ export class AttendancesService {
     private readonly sessionsRepository: Repository<ClassSession>,
     @InjectRepository(ClassEnrollment)
     private readonly enrollmentsRepository: Repository<ClassEnrollment>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -63,6 +66,7 @@ export class AttendancesService {
       .innerJoin('s.class', 'c')
       .where('s.id = :sessionId', { sessionId })
       .andWhere('c.teacher_id = :teacherId', { teacherId })
+      .andWhere('s.deleted_at IS NULL')
       .andWhere('c.deleted_at IS NULL')
       .getOne();
 
@@ -71,6 +75,26 @@ export class AttendancesService {
     }
 
     return session;
+  }
+
+  /**
+   * Validate that the given student exists and belongs to the calling
+   * teacher (`instructor_id = teacherId`). Throws 404 otherwise.
+   *
+   * Without this, a teacher could attach another teacher's student to their
+   * own session — a cross-tenant write that leaks foreign student PII.
+   */
+  private async resolveStudent(
+    studentId: string,
+    teacherId: string,
+  ): Promise<void> {
+    const student = await this.usersRepository.findOne({
+      where: { id: studentId, instructor: { id: teacherId } },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
   }
 
   /**
@@ -84,6 +108,24 @@ export class AttendancesService {
     return this.attendancesRepository.findOne({
       where: { sessionId, studentId },
     });
+  }
+
+  /**
+   * Re-select the active attendance row for (session, student) after an
+   * `ON CONFLICT DO NOTHING` insert. The row is guaranteed to exist by this
+   * point (inserted by us or by a racing caller). Accepts an explicit repo
+   * so the transactional `createBulk` path can reuse it.
+   */
+  private async getExistingOrThrow(
+    sessionId: string,
+    studentId: string,
+    repo: Repository<Attendance> = this.attendancesRepository,
+  ): Promise<Attendance> {
+    const row = await repo.findOne({ where: { sessionId, studentId } });
+    if (!row) {
+      throw new NotFoundException('Attendance not found');
+    }
+    return row;
   }
 
   /**
@@ -108,9 +150,11 @@ export class AttendancesService {
    * Create a single attendance row for a (session, student) pair.
    *
    * IDEMPOTENCY: if a row already exists (non-deleted), return it unchanged.
-   * This invariant holds even across concurrent callers — the DB partial
-   * unique index `uq_attendances_session_student_active` provides the
-   * safety net at the database level.
+   * This invariant holds even across concurrent callers: the INSERT uses
+   * `ON CONFLICT DO NOTHING` against the partial unique index
+   * `uq_attendances_session_student_active`, and we re-select afterwards.
+   * A racing second caller therefore returns the existing row instead of a
+   * 409 — important for the offline-replay / double-tap flow.
    *
    * `isEnrolledClass` is computed from current enrollment state and set
    * ONCE at insert time. On subsequent idempotent returns the existing
@@ -123,7 +167,11 @@ export class AttendancesService {
     // Ownership check — throws 404 if session not found or cross-teacher.
     const session = await this.resolveSession(dto.sessionId, teacherId);
 
-    // Idempotency: return existing row if it already exists.
+    // Student-ownership check — prevents attaching a foreign teacher's
+    // student to this session (cross-tenant PII linkage).
+    await this.resolveStudent(dto.studentId, teacherId);
+
+    // Idempotency fast-path: return existing row if it already exists.
     const existing = await this.findExistingAttendance(
       dto.sessionId,
       dto.studentId,
@@ -138,15 +186,24 @@ export class AttendancesService {
       dto.studentId,
     );
 
-    const attendance = this.attendancesRepository.create({
-      sessionId: dto.sessionId,
-      studentId: dto.studentId,
-      notes: dto.notes ?? null,
-      isEnrolledClass,
-      status: AttendanceStatus.PENDING,
-    });
+    // ON CONFLICT DO NOTHING — a concurrent insert of the same (session,
+    // student) is absorbed rather than raising 23505 → 409.
+    await this.attendancesRepository
+      .createQueryBuilder()
+      .insert()
+      .into(Attendance)
+      .values({
+        sessionId: dto.sessionId,
+        studentId: dto.studentId,
+        notes: dto.notes ?? null,
+        isEnrolledClass,
+        status: AttendanceStatus.PENDING,
+      })
+      .orIgnore()
+      .execute();
 
-    return this.attendancesRepository.save(attendance);
+    // Re-select: the row now exists (inserted by us or by the racing caller).
+    return this.getExistingOrThrow(dto.sessionId, dto.studentId);
   }
 
   // ---------------------------------------------------------------------------
@@ -189,7 +246,7 @@ export class AttendancesService {
       const attendanceRepo = manager.getRepository(Attendance);
 
       for (const enrollment of enrollments) {
-        // Idempotency: check for existing non-deleted row.
+        // Idempotency fast-path: check for existing non-deleted row.
         const existing = await attendanceRepo.findOne({
           where: { sessionId, studentId: enrollment.userId },
         });
@@ -201,16 +258,29 @@ export class AttendancesService {
 
         // New row — snapshot current enrollment state.
         // Since we got the enrollment from the DB above, it is active.
-        const attendance = attendanceRepo.create({
-          sessionId,
-          studentId: enrollment.userId,
-          isEnrolledClass: true,
-          status: AttendanceStatus.PENDING,
-          notes: null,
-        });
+        // ON CONFLICT DO NOTHING absorbs a concurrent insert of the same
+        // (session, student) instead of raising 23505 → 409.
+        await attendanceRepo
+          .createQueryBuilder()
+          .insert()
+          .into(Attendance)
+          .values({
+            sessionId,
+            studentId: enrollment.userId,
+            isEnrolledClass: true,
+            status: AttendanceStatus.PENDING,
+            notes: null,
+          })
+          .orIgnore()
+          .execute();
 
-        const saved = await attendanceRepo.save(attendance);
-        results.push(saved);
+        results.push(
+          await this.getExistingOrThrow(
+            sessionId,
+            enrollment.userId,
+            attendanceRepo,
+          ),
+        );
       }
     });
 
@@ -232,6 +302,7 @@ export class AttendancesService {
       .innerJoin('s.class', 'c')
       .where('a.id = :id', { id })
       .andWhere('c.teacher_id = :teacherId', { teacherId })
+      .andWhere('s.deleted_at IS NULL')
       .andWhere('c.deleted_at IS NULL')
       .getOne();
 
@@ -299,6 +370,7 @@ export class AttendancesService {
       .innerJoin('a.session', 's')
       .innerJoin('s.class', 'c')
       .where('c.teacher_id = :teacherId', { teacherId })
+      .andWhere('s.deleted_at IS NULL')
       .andWhere('c.deleted_at IS NULL')
       .orderBy('a.created_at', 'DESC');
 

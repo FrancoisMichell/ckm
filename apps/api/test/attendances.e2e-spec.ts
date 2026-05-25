@@ -629,6 +629,28 @@ describe('Attendances (e2e)', () => {
       expect(res.status).not.toBe(403);
     });
 
+    it('POST /attendances returns 404 when studentId belongs to another teacher', async () => {
+      const teacherA = await seedTeacherAndLogin();
+      const teacherB = await seedTeacherAndLogin();
+
+      // Session owned by teacher A.
+      const classA = await seedClass(teacherA.accessToken);
+      const sessionA = await seedSession(teacherA.accessToken, classA, '2025-07-26');
+
+      // Student owned by teacher B.
+      const studentB = await seedStudent(teacherB.accessToken);
+
+      // Teacher A tries to attach teacher B's student to A's own session.
+      const res = await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacherA.accessToken}`)
+        .send({ sessionId: sessionA.id, studentId: studentB.id });
+
+      expect(res.status).toBe(404);
+      expect(res.status).not.toBe(403);
+    });
+
     it('POST /attendances/bulk returns 404 for session belonging to another teacher', async () => {
       const teacherA = await seedTeacherAndLogin();
       const teacherB = await seedTeacherAndLogin();
@@ -680,6 +702,36 @@ describe('Attendances (e2e)', () => {
       expect(secondId).toBe(firstId);
 
       // DB has exactly ONE row.
+      const rows = (await ds.query(
+        `SELECT id FROM attendances WHERE session_id = $1 AND student_id = $2`,
+        [session.id as string, student.id],
+      )) as { id: string }[];
+      expect(rows).toHaveLength(1);
+    });
+
+    it('concurrent POST /attendances for same (session, student) → no 409, one row', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const student = await seedStudent(teacher.accessToken);
+      const classId = await seedClass(teacher.accessToken);
+      const session = await seedSession(teacher.accessToken, classId, '2025-07-31');
+
+      const post = () =>
+        request(app.getHttpServer())
+          .post('/attendances')
+          .set(SKIP_THROTTLE)
+          .set('Authorization', `Bearer ${teacher.accessToken}`)
+          .send({ sessionId: session.id, studentId: student.id });
+
+      // Fire several creates in parallel — the race must resolve to the same
+      // row, never a 409.
+      const responses = await Promise.all([post(), post(), post(), post()]);
+
+      for (const res of responses) {
+        expect(res.status).toBe(201);
+      }
+      const ids = responses.map((r) => (r.body as { id: string }).id);
+      expect(new Set(ids).size).toBe(1);
+
       const rows = (await ds.query(
         `SELECT id FROM attendances WHERE session_id = $1 AND student_id = $2`,
         [session.id as string, student.id],
