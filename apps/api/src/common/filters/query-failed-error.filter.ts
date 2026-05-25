@@ -78,6 +78,22 @@ export class QueryFailedErrorFilter implements ExceptionFilter {
       title: 'Invalid class',
       detail: 'The referenced class does not exist.',
     },
+    // M7 — attendances
+    uq_attendances_session_student_active: {
+      status: 409,
+      title: 'Duplicate attendance',
+      detail: 'This student already has an attendance record for this session.',
+    },
+    fk_attendances_session: {
+      status: 422,
+      title: 'Invalid session',
+      detail: 'The referenced session does not exist.',
+    },
+    fk_attendances_student: {
+      status: 422,
+      title: 'Invalid student',
+      detail: 'The referenced student does not exist.',
+    },
   };
 
   constructor(private readonly reporter: ErrorReporter) {}
