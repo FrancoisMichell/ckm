@@ -71,8 +71,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [x] Session 18 — M5 audit + PR (Sonnet + skill) — done 2026-05-23
 - [x] Session 19 — M6 ClassSessions work (Sonnet) — done 2026-05-24
 - [x] Session 20 — M6 audit + PR (Sonnet + skill) — done 2026-05-24
-- [ ] Session 21 — M7 Attendances work (Sonnet)
-- [ ] Session 22 — M7 audit + PR (Opus + skill — PII + audit invariant)
+- [x] Session 21 — M7 Attendances work (Sonnet) — done 2026-05-25
+- [x] Session 22 — M7 audit + PR (Opus + skill — PII + audit invariant) — done 2026-05-25
 - [ ] Session 23 — M8 Health + wiring + seeds work (Sonnet)
 - [ ] Session 24 — M8 audit + PR (Sonnet + skill)
 - [ ] Session 25 — M9 e2e hardening 9.1–9.4 (Sonnet)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Sessions 1–20 complete (M0–M6 merged). M6 (PR #8) landed ClassSessions module: dated occurrences of recurring classes, full CRUD + soft-delete restore, start/end lifecycle with all five state-machine guards, three collection reads (by-class, by-teacher, by-date-range), migration 6 with named constraints and partial unique index. Audit: PASS, no blockers. Security review: no findings above confidence threshold.
-**Next session**: Session 21 — M7 Attendances work (Sonnet, `api-developer` agent, branch `feat/m07-attendances`).
+**Current state**: Sessions 1–22 complete (M0–M7 merged). M7 (PR #9) landed the Attendances module: idempotent single + bulk create, status shortcuts (present/late/absent/excused), notes update, teacher-scoped queries, migration 7 with named constraints + partial unique index, and the `is_enrolled_class` audit snapshot (set at insert, never recomputed). Audit + security-review found two High blockers, both fixed in-branch before merge: (1) cross-tenant student linkage — single-create now scopes `studentId` to `instructor_id`; (2) concurrent-create returned 409 — now `ON CONFLICT DO NOTHING` + re-select returns the existing row. Also filtered soft-deleted sessions on read/write. Findings + resolution in `docs/audits/m07.md`.
+**Next session**: Session 23 — M8 Health + wiring + seeds work (Sonnet, `api-developer` agent, branch `feat/m08-health-wiring-seeds`).
 
 ---
 
