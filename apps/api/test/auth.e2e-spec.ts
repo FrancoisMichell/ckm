@@ -26,6 +26,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { Belt, UserRoleType } from '@ckm/contracts';
+import { JwtService } from '@nestjs/jwt';
 import { createTestApp } from './app.e2e-helper';
 import { UsersService } from '@/users/users.service';
 
@@ -327,7 +328,43 @@ describe('Auth (e2e)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 5. POST /auth/login — 429 after exceeding throttler limit (5/60s)
+  // 5. JWT expiry — expired access token → 401
+  // -------------------------------------------------------------------------
+
+  describe('JWT expiry', () => {
+    it('presents an expired access token to a protected endpoint → 401 problem+json', async () => {
+      const teacher = await seedTeacher(nextRegistry());
+
+      // Forge an immediately-expired token using the JwtService configured for
+      // this app, with the same secret but expiresIn=0 (expires immediately).
+      const jwtService = app.get(JwtService);
+      const expiredToken = jwtService.sign(
+        {
+          sub: teacher.id,
+          username: teacher.registry,
+          name: `Teacher ${teacher.registry}`,
+          roles: ['teacher'],
+        },
+        { expiresIn: 0 },
+      );
+
+      // Tiny delay ensures the token's `exp` claim is in the past before we use it.
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+      const res = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      expect(res.status).toBe(401);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+      expect(res.body.status).toBe(401);
+      expect(res.body.instance).toBe('/auth/me');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. POST /auth/login — 429 after exceeding throttler limit (5/60s)
   // -------------------------------------------------------------------------
   //
   // Must run last in the file: it intentionally omits the skip-throttle
