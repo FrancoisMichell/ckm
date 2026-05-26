@@ -506,6 +506,7 @@ Paste:
 Paste:
 > Starting M9. Create branch `feat/m09-e2e-hardening`. Use the `api-developer` agent. Execute
 > sub-steps 9.1, 9.2, 9.3, 9.4. **9.3 is the teacher-isolation suite — it's a release blocker,
+
 > don't shortcut it.** Every feature endpoint must be covered cross-teacher.
 
 End when: all four sub-step verifications green.
