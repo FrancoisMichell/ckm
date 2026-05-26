@@ -73,7 +73,7 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [x] Session 20 — M6 audit + PR (Sonnet + skill) — done 2026-05-24
 - [x] Session 21 — M7 Attendances work (Sonnet) — done 2026-05-25
 - [x] Session 22 — M7 audit + PR (Opus + skill — PII + audit invariant) — done 2026-05-25
-- [ ] Session 23 — M8 Health + wiring + seeds work (Sonnet)
+- [x] Session 23 — M8 Health + wiring + seeds work (Sonnet) — done 2026-05-26
 - [ ] Session 24 — M8 audit + PR (Sonnet + skill)
 - [ ] Session 25 — M9 e2e hardening 9.1–9.4 (Sonnet)
 - [ ] Session 26 — M9 problem-json + coverage + CI 9.5–9.7 (Sonnet)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Sessions 1–22 complete (M0–M7 merged). M7 (PR #9) landed the Attendances module: idempotent single + bulk create, status shortcuts (present/late/absent/excused), notes update, teacher-scoped queries, migration 7 with named constraints + partial unique index, and the `is_enrolled_class` audit snapshot (set at insert, never recomputed). Audit + security-review found two High blockers, both fixed in-branch before merge: (1) cross-tenant student linkage — single-create now scopes `studentId` to `instructor_id`; (2) concurrent-create returned 409 — now `ON CONFLICT DO NOTHING` + re-select returns the existing row. Also filtered soft-deleted sessions on read/write. Findings + resolution in `docs/audits/m07.md`.
-**Next session**: Session 23 — M8 Health + wiring + seeds work (Sonnet, `api-developer` agent, branch `feat/m08-health-wiring-seeds`).
+**Current state**: Sessions 1–23 complete (M0–M7 merged; M8 in-branch). M8 (branch `feat/m08-health-wiring-seeds`) landed: `HealthController` with terminus + TypeORM indicator (`GET /health` public, 200 `{status:'ok'}`), AppModule final wiring (ThrottlerModule 100/60s, pino LoggerModule with redaction, NoopErrorReporter, guard order Jwt→Roles→Throttler), Swagger moved to `/api` gated by `SWAGGER_ENABLED`, idempotent seed runner (`db/seeds/run-seed.ts`) with 1 teacher (registry `0001`)/6 students/1 class/3 sessions that refuses in production, and `RUN_MIGRATIONS=true` gate in `main.ts`. Smoke flow (8.6) confirmed 2xx at every step with no pino errors.
+**Next session**: Session 24 — M8 audit + PR (Sonnet + `milestone-auditor` agent + `security-review` skill, branch `feat/m08-health-wiring-seeds`).
 
 ---
 
@@ -479,7 +479,7 @@ Paste:
 > the seed file.
 
 End when: the smoke flow (login → list students → create session → create attendance) returns
-2xx at every step with no pino error logs.
+2xx at every step with no pino error logs.11
 
 ✂️ break
 
