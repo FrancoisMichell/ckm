@@ -5,7 +5,7 @@ export const envValidationSchema = Joi.object({
     .valid('development', 'test', 'production')
     .default('development'),
   PORT: Joi.number().default(3000),
-  RUN_MIGRATIONS: Joi.boolean().default(true),
+  RUN_MIGRATIONS: Joi.boolean().default(false),
   ALLOWED_ORIGIN: Joi.string().required(),
 
   DB_TYPE: Joi.string().valid('postgres').required(),
@@ -21,7 +21,7 @@ export const envValidationSchema = Joi.object({
   JWT_REFRESH_TTL_DAYS: Joi.number().default(30),
   BCRYPT_SALT_ROUNDS: Joi.number().default(10),
 
-  SWAGGER_ENABLED: Joi.boolean().default(true),
+  SWAGGER_ENABLED: Joi.boolean().default(false),
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'trace')
     .default('info'),

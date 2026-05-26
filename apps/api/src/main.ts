@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
+import { getDataSourceToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { setupApp } from './common/setup-app';
 import { NoopErrorReporter } from './common/error-reporter/noop-error-reporter';
@@ -14,15 +16,31 @@ async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService);
 
+  // --------------------------------------------------------------------------
+  // Migration runner (sub-step 8.5) — gated by RUN_MIGRATIONS=true.
+  // When set, pending TypeORM migrations are applied before the server
+  // starts listening. This lets a container (or start:dev) auto-migrate on
+  // boot without coupling migration logic to app startup unconditionally.
+  //
+  // NEVER runs in test (NODE_ENV=test) — the e2e suite manages its own schema
+  // via the postgres-test container.
+  // --------------------------------------------------------------------------
+  if (config.get<boolean>('app.runMigrations') === true) {
+    const dataSource = app.get<DataSource>(getDataSourceToken());
+    await dataSource.runMigrations({ transaction: 'each' });
+  }
+
   // Wire global pipes, interceptors, and filters.
   // In production, ErrorReporter should be obtained from DI when a real
   // provider (e.g. Sentry) is configured. For now, NoopErrorReporter is fine.
   setupApp(app, new NoopErrorReporter(), config.getOrThrow<string>('app.allowedOrigin'));
 
   // --------------------------------------------------------------------------
-  // Swagger / OpenAPI — gated behind SWAGGER_ENABLED so it never ships in prod
-  // unless explicitly opted in. The emitted spec at /docs-json is the source
-  // for `pnpm openapi:generate` (consumed by packages/contracts in M4+).
+  // Swagger / OpenAPI (sub-step 8.3) — mounted at /api.
+  // Gated behind SWAGGER_ENABLED so it never ships in prod unless explicitly
+  // opted in. The emitted spec at /api-json is the source for
+  // `pnpm openapi:generate` (consumed by packages/contracts in M10+).
+  // When SWAGGER_ENABLED is absent or false, visiting /api returns 404.
   // --------------------------------------------------------------------------
   if (config.get<boolean>('features.swaggerEnabled') === true) {
     const docBuilder = new DocumentBuilder()
@@ -39,7 +57,7 @@ async function bootstrap(): Promise<void> {
       )
       .build();
     const document = SwaggerModule.createDocument(app, docBuilder);
-    SwaggerModule.setup('docs', app, document);
+    SwaggerModule.setup('api', app, document);
   }
 
   const port = config.getOrThrow<number>('app.port');

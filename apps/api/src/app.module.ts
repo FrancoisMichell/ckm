@@ -17,6 +17,7 @@ import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
 import { ClassSessionsModule } from './class-sessions/class-sessions.module';
 import { AttendancesModule } from './attendances/attendances.module';
+import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -85,6 +86,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     ClassesModule,
     ClassSessionsModule,
     AttendancesModule,
+    HealthModule,
 
     // ------------------------------------------------------------------
     // TypeORM — connection from config; no synchronize, no auto-migrate.
