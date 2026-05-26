@@ -658,6 +658,101 @@ describe('Classes (e2e)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 9.4 extensions — soft-delete list exclusion
+  // -------------------------------------------------------------------------
+
+  describe('Soft-delete list exclusion (9.4)', () => {
+    it('GET /classes list excludes soft-deleted classes', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      // Create two classes and delete one.
+      const c1 = await request(app.getHttpServer())
+        .post('/classes')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ ...validClass(), name: 'Active Class' });
+      expect(c1.status).toBe(201);
+
+      const c2 = await request(app.getHttpServer())
+        .post('/classes')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ ...validClass(), name: 'Deleted Class' });
+      expect(c2.status).toBe(201);
+
+      // Soft-delete c2.
+      await request(app.getHttpServer())
+        .delete(`/classes/${c2.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      // List must only include the active class.
+      const list = await request(app.getHttpServer())
+        .get('/classes')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(list.status).toBe(200);
+      expect(Array.isArray(list.body)).toBe(true);
+      const ids = (list.body as Array<{ id: string }>).map((c) => c.id);
+      expect(ids).toContain(c1.body.id);
+      expect(ids).not.toContain(c2.body.id);
+    });
+
+    it('GET /classes/:id returns 404 after soft-delete', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      const created = await request(app.getHttpServer())
+        .post('/classes')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send(validClass());
+      expect(created.status).toBe(201);
+
+      await request(app.getHttpServer())
+        .delete(`/classes/${created.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      const res = await request(app.getHttpServer())
+        .get(`/classes/${created.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(404);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+    });
+
+    it('POST /classes/:id/restore returns 404 (not 403) when class belongs to another teacher', async () => {
+      const teacherA = await seedTeacherAndLogin();
+      const teacherB = await seedTeacherAndLogin();
+
+      const cls = await request(app.getHttpServer())
+        .post('/classes')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacherA.accessToken}`)
+        .send(validClass());
+
+      // Teacher A soft-deletes their class.
+      await request(app.getHttpServer())
+        .delete(`/classes/${cls.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacherA.accessToken}`);
+
+      // Teacher B tries to restore Teacher A's class.
+      const res = await request(app.getHttpServer())
+        .post(`/classes/${cls.body.id}/restore`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacherB.accessToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.status).not.toBe(403);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // RBAC: STUDENT-only users must not access /classes
   // -------------------------------------------------------------------------
 

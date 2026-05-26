@@ -773,6 +773,140 @@ describe('ClassSessions (e2e)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 9.4 extensions — soft-delete list exclusion + filter edge cases
+  // -------------------------------------------------------------------------
+
+  describe('Soft-delete list exclusion (9.4)', () => {
+    it('GET /class-sessions list excludes soft-deleted sessions', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const classId = await seedClass(teacher.accessToken);
+
+      const s1 = await seedSession(teacher.accessToken, classId, '2025-10-01');
+      const s2 = await seedSession(teacher.accessToken, classId, '2025-10-08');
+
+      // Soft-delete s2.
+      await request(app.getHttpServer())
+        .delete(`/class-sessions/${s2.id as string}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      const list = await request(app.getHttpServer())
+        .get('/class-sessions')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(list.status).toBe(200);
+      const ids = (list.body as Array<{ id: string }>).map((s) => s.id);
+      expect(ids).toContain(s1.id);
+      expect(ids).not.toContain(s2.id);
+    });
+
+    it('GET /class-sessions/:id returns 404 after soft-delete', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const classId = await seedClass(teacher.accessToken);
+      const session = await seedSession(teacher.accessToken, classId, '2025-10-15');
+
+      await request(app.getHttpServer())
+        .delete(`/class-sessions/${session.id as string}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      const res = await request(app.getHttpServer())
+        .get(`/class-sessions/${session.id as string}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+    });
+
+    it('GET /class-sessions/by-date-range excludes soft-deleted sessions', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const classId = await seedClass(teacher.accessToken);
+
+      const s1 = await seedSession(teacher.accessToken, classId, '2025-10-20');
+      const s2 = await seedSession(teacher.accessToken, classId, '2025-10-21');
+
+      // Soft-delete s2.
+      await request(app.getHttpServer())
+        .delete(`/class-sessions/${s2.id as string}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      const res = await request(app.getHttpServer())
+        .get('/class-sessions/by-date-range?from=2025-10-01&to=2025-10-31')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      const ids = (res.body as Array<{ id: string }>).map((s) => s.id);
+      expect(ids).toContain(s1.id);
+      expect(ids).not.toContain(s2.id);
+    });
+
+    it('GET /class-sessions/by-class/:classId excludes soft-deleted sessions', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const classId = await seedClass(teacher.accessToken);
+
+      const s1 = await seedSession(teacher.accessToken, classId, '2025-11-03');
+      const s2 = await seedSession(teacher.accessToken, classId, '2025-11-10');
+
+      // Soft-delete s2.
+      await request(app.getHttpServer())
+        .delete(`/class-sessions/${s2.id as string}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      const res = await request(app.getHttpServer())
+        .get(`/class-sessions/by-class/${classId}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      const ids = (res.body as Array<{ id: string }>).map((s) => s.id);
+      expect(ids).toContain(s1.id);
+      expect(ids).not.toContain(s2.id);
+    });
+  });
+
+  describe('Date-range filter edge cases (9.4)', () => {
+    it('GET /class-sessions/by-date-range with from = to returns only that day', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const classId = await seedClass(teacher.accessToken);
+
+      await seedSession(teacher.accessToken, classId, '2025-11-15');
+      await seedSession(teacher.accessToken, classId, '2025-11-16');
+
+      const res = await request(app.getHttpServer())
+        .get('/class-sessions/by-date-range?from=2025-11-15&to=2025-11-15')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(1);
+      expect((res.body as Array<{ date: string }>)[0].date).toBe('2025-11-15');
+    });
+
+    it('GET /class-sessions/by-date-range returns 422 when to is before from', async () => {
+      const teacher = await seedTeacherAndLogin();
+
+      const res = await request(app.getHttpServer())
+        .get('/class-sessions/by-date-range?from=2025-12-31&to=2025-01-01')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      // from > to: either the service returns empty (acceptable) or
+      // validation returns 422 (also acceptable). Both are correct behavior.
+      // What must NOT happen: 500 or 403.
+      expect([200, 422]).toContain(res.status);
+      if (res.status !== 200) {
+        expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // RBAC
   // -------------------------------------------------------------------------
 

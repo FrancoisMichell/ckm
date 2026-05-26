@@ -583,6 +583,228 @@ describe('Students (e2e)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 9.4 extensions — soft-delete list exclusion + pagination edge cases
+  // -------------------------------------------------------------------------
+
+  describe('Soft-delete list exclusion (9.4)', () => {
+    it('GET /students list excludes soft-deleted students', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      // Create two students and delete one.
+      const s1 = await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Active Student', registry: nextRegistry(), belt: Belt.WHITE });
+      expect(s1.status).toBe(201);
+
+      const s2 = await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Deleted Student', registry: nextRegistry(), belt: Belt.WHITE });
+      expect(s2.status).toBe(201);
+
+      // Soft-delete s2.
+      await request(app.getHttpServer())
+        .delete(`/students/${s2.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      // List should only show the active student.
+      const list = await request(app.getHttpServer())
+        .get('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(list.status).toBe(200);
+      expect(list.body.total).toBe(1);
+      const ids = (list.body.data as Array<{ id: string }>).map((s) => s.id);
+      expect(ids).toContain(s1.body.id);
+      expect(ids).not.toContain(s2.body.id);
+    });
+
+    it('GET /students/:id returns 404 after soft-delete', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      const created = await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'To Delete', registry: nextRegistry(), belt: Belt.WHITE });
+      expect(created.status).toBe(201);
+
+      await request(app.getHttpServer())
+        .delete(`/students/${created.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      const res = await request(app.getHttpServer())
+        .get(`/students/${created.body.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(404);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+    });
+  });
+
+  describe('Pagination edge cases (9.4)', () => {
+    it('GET /students page 1 of 3 — returns first two items', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      for (let i = 0; i < 3; i++) {
+        await request(app.getHttpServer())
+          .post('/students')
+          .set(SKIP_THROTTLE)
+          .set('Authorization', auth)
+          .send({ name: `Page Student ${i}`, registry: nextRegistry(), belt: Belt.WHITE });
+      }
+
+      const res = await request(app.getHttpServer())
+        .get('/students?page=1&limit=2')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(200);
+      expect(res.body.page).toBe(1);
+      expect(res.body.limit).toBe(2);
+      expect(res.body.total).toBe(3);
+      expect(res.body.data).toHaveLength(2);
+    });
+
+    it('GET /students page beyond total — returns empty data array', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Only Student', registry: nextRegistry(), belt: Belt.WHITE });
+
+      // Page 99 with 10 per page — well beyond total of 1.
+      const res = await request(app.getHttpServer())
+        .get('/students?page=99&limit=10')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.data).toHaveLength(0);
+    });
+
+    it('GET /students with large limit — returns all items up to total', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Student A', registry: nextRegistry(), belt: Belt.WHITE });
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Student B', registry: nextRegistry(), belt: Belt.WHITE });
+
+      const res = await request(app.getHttpServer())
+        .get('/students?page=1&limit=100')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(2);
+      expect(res.body.data).toHaveLength(2);
+    });
+
+    it('GET /students sorts by name ASC', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Zara', registry: nextRegistry(), belt: Belt.WHITE });
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Aaron', registry: nextRegistry(), belt: Belt.WHITE });
+
+      const res = await request(app.getHttpServer())
+        .get('/students?sortBy=name&sortOrder=ASC')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(200);
+      const names = (res.body.data as Array<{ name: string }>).map((s) => s.name);
+      expect(names[0]).toBe('Aaron');
+      expect(names[names.length - 1]).toBe('Zara');
+    });
+
+    it('GET /students sorts by name DESC', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Zara', registry: nextRegistry(), belt: Belt.WHITE });
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Aaron', registry: nextRegistry(), belt: Belt.WHITE });
+
+      const res = await request(app.getHttpServer())
+        .get('/students?sortBy=name&sortOrder=DESC')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(200);
+      const names = (res.body.data as Array<{ name: string }>).map((s) => s.name);
+      expect(names[0]).toBe('Zara');
+    });
+
+    it('GET /students with combined name + belt filter', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const auth = `Bearer ${teacher.accessToken}`;
+
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Blue Alice', registry: nextRegistry(), belt: Belt.BLUE });
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'White Alice', registry: nextRegistry(), belt: Belt.WHITE });
+      await request(app.getHttpServer())
+        .post('/students')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth)
+        .send({ name: 'Blue Bob', registry: nextRegistry(), belt: Belt.BLUE });
+
+      const res = await request(app.getHttpServer())
+        .get(`/students?name=alice&belts=${Belt.BLUE}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', auth);
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.data[0].name).toBe('Blue Alice');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // RBAC: a STUDENT-only user must not access /students
   // -------------------------------------------------------------------------
 

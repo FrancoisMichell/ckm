@@ -835,6 +835,153 @@ describe('Attendances (e2e)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 9.4 extensions — additional filter combinations and edge cases
+  // -------------------------------------------------------------------------
+
+  describe('Query filter combinations (9.4)', () => {
+    it('GET /attendances?studentId= filters by student', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const studentA = await seedStudent(teacher.accessToken);
+      const studentB = await seedStudent(teacher.accessToken);
+      const classId = await seedClass(teacher.accessToken);
+      const session = await seedSession(teacher.accessToken, classId, '2025-09-10');
+
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: session.id, studentId: studentA.id });
+
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: session.id, studentId: studentB.id });
+
+      const res = await request(app.getHttpServer())
+        .get(`/attendances?studentId=${studentA.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect((res.body as Array<{ studentId: string }>)[0].studentId).toBe(studentA.id);
+    });
+
+    it('GET /attendances?status=late filters by status', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const studentA = await seedStudent(teacher.accessToken);
+      const studentB = await seedStudent(teacher.accessToken);
+      const classId = await seedClass(teacher.accessToken);
+      const session = await seedSession(teacher.accessToken, classId, '2025-09-11');
+
+      const a1 = await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: session.id, studentId: studentA.id });
+
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: session.id, studentId: studentB.id });
+
+      // Mark studentA as late.
+      await request(app.getHttpServer())
+        .patch(`/attendances/${(a1.body as { id: string }).id}/late`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      const res = await request(app.getHttpServer())
+        .get('/attendances?status=late')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect((res.body as Array<{ status: string }>)[0].status).toBe('late');
+    });
+
+    it('GET /attendances?status=pending filters by pending status', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const studentA = await seedStudent(teacher.accessToken);
+      const classId = await seedClass(teacher.accessToken);
+      const session = await seedSession(teacher.accessToken, classId, '2025-09-12');
+
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: session.id, studentId: studentA.id });
+
+      const res = await request(app.getHttpServer())
+        .get('/attendances?status=pending')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect((res.body as Array<{ status: string }>)[0].status).toBe('pending');
+    });
+
+    it('GET /attendances?sessionId=&studentId= combined filter', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const studentA = await seedStudent(teacher.accessToken);
+      const studentB = await seedStudent(teacher.accessToken);
+      const classId = await seedClass(teacher.accessToken);
+      const sessionA = await seedSession(teacher.accessToken, classId, '2025-09-15');
+      const sessionB = await seedSession(teacher.accessToken, classId, '2025-09-16');
+
+      // Create attendances for both students in both sessions.
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: sessionA.id, studentId: studentA.id });
+
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: sessionA.id, studentId: studentB.id });
+
+      await request(app.getHttpServer())
+        .post('/attendances')
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`)
+        .send({ sessionId: sessionB.id, studentId: studentA.id });
+
+      // Filter by both sessionA and studentA — should return exactly one row.
+      const res = await request(app.getHttpServer())
+        .get(`/attendances?sessionId=${sessionA.id as string}&studentId=${studentA.id}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect((res.body as Array<{ sessionId: string; studentId: string }>)[0].sessionId).toBe(sessionA.id);
+      expect((res.body as Array<{ sessionId: string; studentId: string }>)[0].studentId).toBe(studentA.id);
+    });
+
+    it('GET /attendances returns empty array when no rows match filter', async () => {
+      const teacher = await seedTeacherAndLogin();
+      const classId = await seedClass(teacher.accessToken);
+      const session = await seedSession(teacher.accessToken, classId, '2025-09-18');
+      const _ = session; // session created, no attendances
+
+      const res = await request(app.getHttpServer())
+        .get(`/attendances?sessionId=${session.id as string}`)
+        .set(SKIP_THROTTLE)
+        .set('Authorization', `Bearer ${teacher.accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Query filters: GET /attendances?sessionId=...
   // -------------------------------------------------------------------------
 
