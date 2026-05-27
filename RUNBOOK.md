@@ -76,7 +76,7 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [x] Session 23 — M8 Health + wiring + seeds work (Sonnet) — done 2026-05-26
 - [ ] Session 24 — M8 audit + PR (Sonnet + skill)
 - [ ] Session 25 — M9 e2e hardening 9.1–9.4 (Sonnet)
-- [ ] Session 26 — M9 problem-json + coverage + CI 9.5–9.7 (Sonnet)
+- [x] Session 26 — M9 problem-json + coverage + CI 9.5–9.7 (Sonnet) — done 2026-05-27
 - [ ] Session 27 — **M9 tag audit (full-codebase) + PR + `v0.1.0-api-complete` tag** (Opus + skill)
 
 ### Phase 2 — Frontend foundation + design system (M10–M11b)
@@ -122,8 +122,8 @@ Total sessions: ~60. Mark each box as you complete the session.
 - [ ] Session 59 — M16c polish work (Opus)
 - [ ] Session 60 — **M16c tag audit (full-codebase) + PR + `v1.0.0` tag** (Opus + skill)
 
-**Current state**: Sessions 1–23 complete (M0–M7 merged; M8 in-branch). M8 (branch `feat/m08-health-wiring-seeds`) landed: `HealthController` with terminus + TypeORM indicator (`GET /health` public, 200 `{status:'ok'}`), AppModule final wiring (ThrottlerModule 100/60s, pino LoggerModule with redaction, NoopErrorReporter, guard order Jwt→Roles→Throttler), Swagger moved to `/api` gated by `SWAGGER_ENABLED`, idempotent seed runner (`db/seeds/run-seed.ts`) with 1 teacher (registry `0001`)/6 students/1 class/3 sessions that refuses in production, and `RUN_MIGRATIONS=true` gate in `main.ts`. Smoke flow (8.6) confirmed 2xx at every step with no pino errors.
-**Next session**: Session 24 — M8 audit + PR (Sonnet + `milestone-auditor` agent + `security-review` skill, branch `feat/m08-health-wiring-seeds`).
+**Current state**: Sessions 1–26 complete (M0–M8 merged; M9 in-branch `feat/m09-e2e-hardening`). M9 sub-steps 9.1–9.7 all done: test support helpers + factories (9.1), hardened auth e2e (9.2), teacher-isolation e2e release blocker (9.3), extended feature suites with filters/pagination/soft-delete (9.4), `problem-json.e2e-spec.ts` covering RFC 7807 shapes (9.5), Jest coverage thresholds lines/fn/branch/stmt 80/80/75/80 with exclusion list (9.6), and CI updated with `postgres:16-alpine` service container + `e2e` job (9.7). All 9 e2e suites (190 tests) pass; unit coverage at ~96% statements.
+**Next session**: Session 27 — M9 **tag audit (full-codebase)** + PR + `v0.1.0-api-complete` tag (Opus + `milestone-auditor` agent in full-codebase mode + `security-review` skill, branch `feat/m09-e2e-hardening`).
 
 ---
 

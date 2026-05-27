@@ -53,3 +53,91 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  e2e:
+    name: e2e / coverage
+    runs-on: ubuntu-latest
+    needs: ci
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ckm
+          POSTGRES_PASSWORD: ckm
+          POSTGRES_DB: ckm_test
+        options: >-
+          --health-cmd "pg_isready -U ckm"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build contracts
+        run: pnpm --filter @ckm/contracts build
+
+      - name: Run migrations against test DB
+        working-directory: apps/api
+        env:
+          NODE_ENV: test
+          DB_TYPE: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: ckm
+          DB_PASSWORD: ckm
+          DB_NAME: ckm_test
+          JWT_SECRET: test_secret_that_is_long_enough_32chars_ok
+          JWT_ACCESS_TTL: 15m
+          JWT_REFRESH_TTL_DAYS: "30"
+          BCRYPT_SALT_ROUNDS: "1"
+          SWAGGER_ENABLED: "false"
+          LOG_LEVEL: error
+          ALLOWED_ORIGIN: http://localhost:5173
+        run: npm run migration:run
+
+      - name: E2E tests
+        working-directory: apps/api
+        env:
+          # Override the local .env.test DB_PORT (5433) with the CI service port (5432).
+          # All other vars are loaded from .env.test via jest-e2e-setup.ts; these
+          # overrides take precedence thanks to dotenv's `override: true`.
+          NODE_ENV: test
+          DB_TYPE: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: ckm
+          DB_PASSWORD: ckm
+          DB_NAME: ckm_test
+          JWT_SECRET: test_secret_that_is_long_enough_32chars_ok
+          JWT_ACCESS_TTL: 15m
+          JWT_REFRESH_TTL_DAYS: "30"
+          BCRYPT_SALT_ROUNDS: "1"
+          SWAGGER_ENABLED: "false"
+          LOG_LEVEL: error
+          ALLOWED_ORIGIN: http://localhost:5173
+          THROTTLE_TEST_BYPASS_TOKEN: test_throttle_bypass_token_for_e2e_only
+        run: pnpm test:e2e
+
+      - name: Unit coverage (thresholds enforced)
+        working-directory: apps/api
+        run: pnpm test:cov

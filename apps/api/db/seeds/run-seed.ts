@@ -47,7 +47,7 @@ import { datasourceOptions } from '../datasource';
 // ──────────────────────────────────────────────────────────────────────────────
 
 /** Plain-text password for the seeded teacher account (registry `0001`). */
-export const SEED_TEACHER_PASSWORD = 'Admin@12345';
+const SEED_TEACHER_PASSWORD = 'Admin@12345';
 
 /** Bcrypt cost rounds used during seeding (low for speed; not used in prod). */
 const SEED_BCRYPT_ROUNDS = 10;

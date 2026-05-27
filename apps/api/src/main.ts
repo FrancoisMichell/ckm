@@ -22,10 +22,14 @@ async function bootstrap(): Promise<void> {
   // starts listening. This lets a container (or start:dev) auto-migrate on
   // boot without coupling migration logic to app startup unconditionally.
   //
-  // NEVER runs in test (NODE_ENV=test) — the e2e suite manages its own schema
-  // via the postgres-test container.
+  // Explicitly excluded from NODE_ENV=test: the e2e suite manages its own
+  // schema via ds.runMigrations() in beforeAll to avoid double-migration
+  // races against the postgres-test container.
   // --------------------------------------------------------------------------
-  if (config.get<boolean>('app.runMigrations') === true) {
+  if (
+    config.get<boolean>('app.runMigrations') === true
+    && process.env['NODE_ENV'] !== 'test'
+  ) {
     const dataSource = app.get<DataSource>(getDataSourceToken());
     await dataSource.runMigrations({ transaction: 'each' });
   }
