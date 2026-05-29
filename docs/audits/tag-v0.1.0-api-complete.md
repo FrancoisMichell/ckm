@@ -47,6 +47,11 @@ existence oracle. The code comment defers scoping to M5/M6 but it was never wire
 path. Parameterised query, so no SQLi. Recommend scoping to the calling teacher and returning 404
 uniformly. Track before the FE consumes these filters in M12/M13.
 
+> **RESOLVED** (fix-forward, branch `fix/tag-v0.1.0-followups`, after the tag): both checks are now
+> teacher-scoped — `classes.id = $1 AND teacher_id = $2`, and `class_sessions` JOINs `classes` on
+> `c.teacher_id = $2`. Foreign-teacher ids now return the same 404 as non-existent ids. Covered by 4
+> unit specs + 4 teacher-isolation e2e cases. Not in the `v0.1.0-api-complete` tag (rides next tag).
+
 ### TAG-2 (info) - Teacher-isolation 404 enforced consistently
 All feature services funnel cross-teacher access to NotFoundException. students uses a single
 belongsToTeacher guard; classes/class-sessions/attendances use ownership-scoped query builders
@@ -60,6 +65,10 @@ matches exactly one segment, so the wildcard password path covers body.password 
 NOT req.body.password (two segments under req). nestjs-pino does not serialize request bodies by
 default, so credentials are not currently logged; the redaction net has a hole only if body logging
 is later enabled. Recommend adding explicit req.body.password / req.body.refresh_token. Low severity.
+
+> **RESOLVED** (fix-forward, branch `fix/tag-v0.1.0-followups`, after the tag): explicit
+> `req.body.password` and `req.body.refresh_token` paths added to `pino.config.ts`. Not in the
+> `v0.1.0-api-complete` tag (rides next tag).
 
 ### TAG-4 (info) - Auth hardening is strong
 Constant-time credential validation via a precomputed dummy bcrypt hash; refresh tokens stored as
