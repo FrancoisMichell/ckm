@@ -26,6 +26,11 @@ export const pinoConfig: Params = {
       paths: [
         'req.headers.authorization',
         'req.headers.cookie',
+        // Explicit req.body.* paths: the `*.password` wildcard matches a single
+        // path segment and does NOT reach `req.body.password`. These guard
+        // credentials if request-body logging is ever enabled.
+        'req.body.password',
+        'req.body.refresh_token',
         '*.password',
         '*.refresh_token',
         '*.access_token',
