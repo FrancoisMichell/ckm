@@ -120,7 +120,9 @@ jobs:
         env:
           # Override the local .env.test DB_PORT (5433) with the CI service port (5432).
           # All other vars are loaded from .env.test via jest-e2e-setup.ts; these
-          # overrides take precedence thanks to dotenv's `override: true`.
+          # workflow env vars are already in process.env before Jest runs, and both
+          # jest-e2e-setup.ts and db/datasource.ts load dotenv with override: false,
+          # so the pre-set CI values win over the .env.test defaults.
           NODE_ENV: test
           DB_TYPE: postgres
           DB_HOST: localhost
