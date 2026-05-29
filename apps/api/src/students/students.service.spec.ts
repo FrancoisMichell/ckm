@@ -134,6 +134,68 @@ describe('StudentsService', () => {
       );
       expect(usersService.findByRole).not.toHaveBeenCalled();
     });
+
+    it('scopes the notEnrolledInClass existence check to the calling teacher', async () => {
+      const query = new QueryStudentsDto();
+      const classId = '11111111-1111-4000-8000-000000000000';
+      query.notEnrolledInClass = classId;
+      (usersRepository.query as jest.Mock).mockResolvedValue([{ '?column?': 1 }]);
+      (usersService.findByRole as jest.Mock).mockResolvedValue({
+        data: [],
+        meta: {},
+      });
+
+      await service.findAll(query, teacherA);
+
+      const [sql, params] = (usersRepository.query as jest.Mock).mock.calls[0];
+      expect(sql).toMatch(/teacher_id\s*=\s*\$2/);
+      expect(params).toEqual([classId, teacherA]);
+    });
+
+    it('scopes the notInSession existence check to the calling teacher via parent class', async () => {
+      const query = new QueryStudentsDto();
+      const sessionId = '22222222-2222-4000-8000-000000000000';
+      query.notInSession = sessionId;
+      (usersRepository.query as jest.Mock).mockResolvedValue([{ '?column?': 1 }]);
+      (usersService.findByRole as jest.Mock).mockResolvedValue({
+        data: [],
+        meta: {},
+      });
+
+      await service.findAll(query, teacherA);
+
+      const [sql, params] = (usersRepository.query as jest.Mock).mock.calls[0];
+      expect(sql).toMatch(/join\s+classes/i);
+      expect(sql).toMatch(/c\.teacher_id\s*=\s*\$2/);
+      expect(params).toEqual([sessionId, teacherA]);
+    });
+
+    it('returns 404 for a foreign teacher’s classId (existence is scoped, not leaked)', async () => {
+      const query = new QueryStudentsDto();
+      query.notEnrolledInClass = 'teacher-b-class-id';
+      // The scoped query finds nothing because the row belongs to teacherB.
+      (usersRepository.query as jest.Mock).mockResolvedValue([]);
+
+      await expect(service.findAll(query, teacherA)).rejects.toThrow(
+        NotFoundException,
+      );
+      const [, params] = (usersRepository.query as jest.Mock).mock.calls[0];
+      expect(params).toEqual(['teacher-b-class-id', teacherA]);
+      expect(usersService.findByRole).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 for a foreign teacher’s sessionId (existence is scoped, not leaked)', async () => {
+      const query = new QueryStudentsDto();
+      query.notInSession = 'teacher-b-session-id';
+      (usersRepository.query as jest.Mock).mockResolvedValue([]);
+
+      await expect(service.findAll(query, teacherA)).rejects.toThrow(
+        NotFoundException,
+      );
+      const [, params] = (usersRepository.query as jest.Mock).mock.calls[0];
+      expect(params).toEqual(['teacher-b-session-id', teacherA]);
+      expect(usersService.findByRole).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------

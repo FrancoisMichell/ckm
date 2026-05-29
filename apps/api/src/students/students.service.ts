@@ -63,7 +63,7 @@ export class StudentsService {
     query: QueryStudentsDto,
     currentTeacherId: string,
   ): Promise<PaginatedResponse<User>> {
-    await this.validateExclusionFilters(query);
+    await this.validateExclusionFilters(query, currentTeacherId);
 
     return this.usersService.findByRole(
       UserRoleType.STUDENT,
@@ -170,16 +170,23 @@ export class StudentsService {
    * matches the cross-tenant contract — clients cannot probe for the
    * existence of out-of-tenant classes/sessions.
    *
-   * Tenant scoping on these lookups lands in M5/M6 when those modules ship;
-   * for now the bare existence check is enough.
+   * Both lookups are scoped to the calling teacher's tenant:
+   *  - `classes` ownership is the `teacher_id` column;
+   *  - `class_sessions` ownership is derived through its parent class
+   *    (`class_sessions.class_id` → `classes.teacher_id`).
+   *
+   * A class/session that belongs to another teacher therefore yields the
+   * SAME 404 as a non-existent id — it must not leak whether an out-of-tenant
+   * resource exists.
    */
   private async validateExclusionFilters(
     query: QueryStudentsDto,
+    currentTeacherId: string,
   ): Promise<void> {
     if (query.notEnrolledInClass) {
       const exists = (await this.usersRepository.query(
-        `SELECT 1 FROM classes WHERE id = $1 LIMIT 1`,
-        [query.notEnrolledInClass],
+        `SELECT 1 FROM classes WHERE id = $1 AND teacher_id = $2 LIMIT 1`,
+        [query.notEnrolledInClass, currentTeacherId],
       )) as unknown[];
       if (exists.length === 0) {
         throw new NotFoundException(
@@ -190,8 +197,12 @@ export class StudentsService {
 
     if (query.notInSession) {
       const exists = (await this.usersRepository.query(
-        `SELECT 1 FROM class_sessions WHERE id = $1 LIMIT 1`,
-        [query.notInSession],
+        `SELECT 1
+           FROM class_sessions cs
+           JOIN classes c ON c.id = cs.class_id
+          WHERE cs.id = $1 AND c.teacher_id = $2
+          LIMIT 1`,
+        [query.notInSession, currentTeacherId],
       )) as unknown[];
       if (exists.length === 0) {
         throw new NotFoundException(

@@ -211,6 +211,46 @@ describe('Teacher isolation (e2e) — RELEASE BLOCKER', () => {
       )) as { deleted_at: Date | null }[];
       expect(rows[0].deleted_at).toBeNull();
     });
+
+    // TAG-1: the exclusion-filter existence checks must be teacher-scoped.
+    // A foreign-teacher classId/sessionId must return the SAME 404 as a
+    // non-existent id — it must not leak that the resource exists elsewhere.
+
+    it('GET /students?notEnrolledInClass=<Teacher B\'s classId> — 404 (no existence leak)', async () => {
+      const res = await as(world.tA.accessToken).get(
+        `/students?notEnrolledInClass=${world.classB.id}`,
+      );
+      expectProblemDetails(res, 404);
+      expect(res.status).not.toBe(403);
+    });
+
+    it('GET /students?notInSession=<Teacher B\'s sessionId> — 404 (no existence leak)', async () => {
+      const res = await as(world.tA.accessToken).get(
+        `/students?notInSession=${world.sessionB.id}`,
+      );
+      expectProblemDetails(res, 404);
+      expect(res.status).not.toBe(403);
+    });
+
+    it('GET /students?notEnrolledInClass=<Teacher A\'s own classId> — 200 (own ids still work)', async () => {
+      const res = await as(world.tA.accessToken).get(
+        `/students?notEnrolledInClass=${world.classA.id}`,
+      );
+      expect(res.status).toBe(200);
+      // studentA is enrolled in classA, so the exclusion filter removes them.
+      const ids = (res.body.data as Array<{ id: string }>).map((s) => s.id);
+      expect(ids).not.toContain(world.studentA.id);
+    });
+
+    it('GET /students?notInSession=<Teacher A\'s own sessionId> — 200 (own ids still work)', async () => {
+      const res = await as(world.tA.accessToken).get(
+        `/students?notInSession=${world.sessionA.id}`,
+      );
+      expect(res.status).toBe(200);
+      // studentA has an attendance row in sessionA, so they are excluded.
+      const ids = (res.body.data as Array<{ id: string }>).map((s) => s.id);
+      expect(ids).not.toContain(world.studentA.id);
+    });
   });
 
   // =========================================================================
