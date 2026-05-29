@@ -23,7 +23,6 @@ describe('ClassSessionsService', () => {
   let classesService: jest.Mocked<ClassesService>;
 
   const teacherA = 'teacher-aaa';
-  const teacherB = 'teacher-bbb';
 
   const stubSession = (
     id: string,
